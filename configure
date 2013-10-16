@@ -1,0 +1,13 @@
+pushd .
+
+git submodule init
+
+# build glfw
+mkdir -p 3rd/glfw/build/
+cd       3rd/glfw/build/
+cmake ..
+make
+
+#TODO: put .a file somewhere easy to link.
+
+popd
