@@ -5,6 +5,15 @@ typedef struct sgn_base T;
 
 void sgn_base_pre_draw(T *self, struct scene *scene) {
 	T **kid;
+	if (self->parent) {
+		/* find to_world and from_world transformation. */
+		tzm4_mulm(      &sgn_base_to(self),
+				&sgn_base_to(self->parent),
+				&sgn_base_T(self));
+		tzm4_mulm(      &sgn_base_from(self),
+				&sgn_base_from(self->parent),
+				&sgn_base_I(self));
+	}
 	tzarray_p_foreach_t(kid, &self->kids, T*) {
 		sgn_pre_draw(*kid, scene);
 	}

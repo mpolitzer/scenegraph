@@ -21,11 +21,14 @@ material_default(struct material *self) {
 struct material *material_init(struct material *self,
 		tzv4 ambient,
 		tzv4 diffuse,
-		tzv4 specular) {
-	material_default(self);
+		tzv4 specular,
+		tzv4 emission,
+		float shi) {
 	self->ambient  = ambient;
 	self->diffuse  = diffuse;
 	self->specular = specular;
+	self->emission = emission;
+	self->shininess = shi;
 	return self;
 }
 

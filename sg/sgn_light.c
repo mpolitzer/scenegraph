@@ -4,7 +4,7 @@
 typedef struct sgn_light T;
 
 static void light_init  (T *self);
-static void light_load  (T *self);
+static void light_load  (T *self, tzm4 *T);
 static void light_unload(T *self);
 
 /* num of lights in use */
@@ -22,21 +22,15 @@ void sg_core_axes(void) {
 
 void sgn_light_pre_draw(struct sgn_base *_self, struct scene *scene) {
 	T *self = (T *)_self;
-	/* calc your own matrix and load it because the light position is 
-	 * multiplied by the ModelView matrix */
-	tzm4_mulm(      &sgn_base_to(_self),
-			&sgn_base_to(_self->parent),
-			&sgn_base_T(_self));
-	glLoadMatrixf(sgn_base_to(_self).f);
-	sg_core_axes();
-	light_load(self);
 	sgn_base_pre_draw(_self, scene);
+	light_load(self, &sgn_base_to(_self));
+	sg_core_axes();
 }
 
 void sgn_light_post_draw(struct sgn_base *_self, struct scene *scene) {
 	T *self = (T *)_self;
-	light_unload(self);
 	sgn_base_post_draw(_self, scene);
+	light_unload(self);
 }
 
 static struct sgn_vtbl sgn_light_vtbl = {
@@ -68,7 +62,8 @@ static void light_init(T *self) {
 }
 
 /* backend ops */
-static void light_load(T *self) {
+static void light_load(T *self, tzm4 *T) {
+	glLoadMatrixf(T->f);
 	glPushAttrib(GL_LIGHTING_BIT);
 	glEnable (GL_LIGHT0 + _lights);
 	glLightfv(GL_LIGHT0 + _lights, GL_AMBIENT,       self->light.ambient.f);

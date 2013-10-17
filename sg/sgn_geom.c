@@ -9,10 +9,6 @@ struct vertex {
 };
 
 static void sgn_geom_pre_draw(struct sgn_base *_self, struct scene *scene) {
-	/* find the to world transformation. */
-	tzm4_mulm(      &sgn_base_to(_self),
-			&sgn_base_to(_self->parent),
-			&sgn_base_T(_self));
 	sgn_base_pre_draw(_self, scene);
 }
 
