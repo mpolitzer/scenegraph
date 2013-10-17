@@ -24,10 +24,10 @@ static void sg_core_axes(void);
 static void cache_populate(void) {
 	cache_init();
 #define NEW_G malloc(sizeof(struct geometry))
-	cache_put("/geom/sphere",   geometry_mksphere  (NEW_G, 32, 32));
-	cache_put("/geom/plane",    geometry_mkplane   (NEW_G, 32));
-	cache_put("/geom/cylinder", geometry_mkcylinder(NEW_G, 32, 32));
-	cache_put("/geom/cone",     geometry_mkcone    (NEW_G, 32, 32));
+	cache_put("/geom/sphere",   geometry_mksphere  (NEW_G, 64, 64));
+	cache_put("/geom/plane",    geometry_mkplane   (NEW_G, 64));
+	cache_put("/geom/cylinder", geometry_mkcylinder(NEW_G, 64, 64));
+	cache_put("/geom/cone",     geometry_mkcone    (NEW_G, 64, 64));
 #undef NEW_G
 #define NEW_M malloc(sizeof(struct material))
 	cache_put("/mat/default", material_default(NEW_M));
@@ -70,6 +70,13 @@ static void key_callback(GLFWwindow* window,
 		r += 0.3;
 	if (key == GLFW_KEY_A && action_mask)
 		r -= 0.3;
+	if (key == GLFW_KEY_M && action == GLFW_PRESS) {
+		static int mode=0;
+		glPolygonMode(GL_FRONT_AND_BACK,
+				(mode==0) ? GL_POINT :
+				(mode==1) ? GL_LINE  : GL_FILL);
+		mode = (mode+1) % 3;
+	}
 	if (key == GLFW_KEY_R && action_mask) {
 		tzm4_mkrows(&sgn_base_I(S.active_cam),
 				tzv4_mk( 1, 0, 0, 0),
@@ -173,17 +180,10 @@ int main(int argc, char *argv[]) {
 	while (!glfwWindowShouldClose(_window)) {
 		double t0 = glfwGetTime();
 		double s = sin(t0), c = cos(t0);
-#if 0
-		tzm4_lookat(&sgn_base_I(&cam.base),
-				tzv4_mkp(3*s, 3, 3*c),
-				tzv4_mkp(0, 0, 0),
-				tzv4_mkp(0, 1, 0));
-#endif
+
 		sgn_rotate(&cone.base, 0.001, tzv4_mkp(1*s, 0, 1*c));
 		tzm4_inverse(&sgn_base_I(&cone.base), &sgn_base_T(&cone.base));
-#if 0
-		sgn_rotate(&sphere.base, 0.1, tzv4_mkp(1, 0, 0));
-#endif
+
 		scene_draw(&S);
 
 		glfwSwapBuffers(_window);
