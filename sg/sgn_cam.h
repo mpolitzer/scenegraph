@@ -14,5 +14,6 @@ struct sgn_cam *sgn_cam_init (struct sgn_cam *self, const char *name);
 
 void            sgn_cam_setup(struct sgn_cam *self, struct scene *scene);
 bool            sgn_iscam(struct sgn_cam *self);
+void            sgn_cam_attach(struct sgn_cam *self, struct sgn_base *parent);
 
 #endif /* SGN_CAM_H */

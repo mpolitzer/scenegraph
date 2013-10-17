@@ -74,6 +74,8 @@ static inline void tzarray_p_print(struct tzarray_p_t *a) {
 
 }
 
+#define tzarray_p_n(a_) ((a_)->n)
+
 #define tzarray_p_foreach_t(it_, a_, t_)\
 	if ((a_)->buf) for ((it_)=(t_*)(a_)->buf;\
 			(it_) < (t_*)(a_)->buf+(a_)->n; ++(it_))

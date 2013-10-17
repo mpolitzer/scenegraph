@@ -1,76 +1,164 @@
+#include <stdlib.h>
+
 #include <sg/scene.h>
 #include <tzmath/tzmath.h>
 #include <sg/gl/backend.h>
 
+#include <sg/cache.h>
 #include <sg/sgn_geom.h>
 #include <sg/sgn_light.h>
 #include <sg/sgn_cam.h>
 
-static GLFWwindow *_window;
-static struct sgn_geom _sphere32x32, _plane32, _cylinder32x32, _cone32x32;
+#include <sg/ds/tzarray_p.h>
+#include <sg/ds/tzarray_p.inl>
 
-static void geom_init(void);
+static struct scene S;
+static GLFWwindow *_window;
+struct tzarray_p_t _nodes;
+
 static void gfx_init(void);
 static void gfx_fini(void);
 static void reshape(GLFWwindow *win, int w, int h);
 static void sg_core_axes(void);
 
+static void cache_populate(void) {
+	cache_init();
+#define NEW_G malloc(sizeof(struct geometry))
+	cache_put("/geom/sphere",   geometry_mksphere  (NEW_G, 32, 32));
+	cache_put("/geom/plane",    geometry_mkplane   (NEW_G, 32));
+	cache_put("/geom/cylinder", geometry_mkcylinder(NEW_G, 32, 32));
+	cache_put("/geom/cone",     geometry_mkcone    (NEW_G, 32, 32));
+#undef NEW_G
+#define NEW_M malloc(sizeof(struct material))
+	cache_put("/mat/default", material_default(NEW_M));
+#undef NEW_M
+}
+
+static void key_callback(GLFWwindow* window,
+		int key, int scancode,
+		int action, int mods) {
+	static float phi=1, theta=M_PI/2, r=2.0;
+	static int focus=0;
+	float sp, st, cp, ct;
+
+	bool action_mask = (action == GLFW_PRESS || action == GLFW_REPEAT);
+
+	if (key == GLFW_KEY_ESCAPE && action_mask)
+		glfwSetWindowShouldClose(window, GL_TRUE);
+	if (key == GLFW_KEY_UP && action_mask)
+		phi += 0.03;
+	if (key == GLFW_KEY_DOWN && action_mask)
+		phi -= 0.03;
+	if (key == GLFW_KEY_LEFT && action_mask)
+		theta += 0.03;
+	if (key == GLFW_KEY_RIGHT && action_mask)
+		theta -= 0.03;
+	if (key == GLFW_KEY_Z && action_mask)
+		r += 0.3;
+	if (key == GLFW_KEY_A && action_mask)
+		r -= 0.3;
+	if (key == GLFW_KEY_SPACE && action == GLFW_PRESS) {
+		focus = ++focus % tzarray_p_n(&_nodes);
+	}
+
+	sp = sin(phi),   cp = cos(phi);
+	st = sin(theta), ct = cos(theta);
+	tzm4_lookat(&sgn_base_I(S.active_cam),
+			tzv4_mkp(r*ct*sp, r*cp, r*sp*st),
+			tzv4_mkp(      0,    0,       0),
+			tzv4_mkp(      0,    1,       0));
+	sgn_cam_attach(S.active_cam, tzarray_p_getp(&_nodes)[focus]);
+}
+
 int main(int argc, char *argv[]) {
-	struct scene S;
 	struct sgn_geom sphere, plane, cone, cylinder;
 	struct sgn_base *root = scene_getroot(&S);
 	struct sgn_light lamp;
+	struct sgn_light spot;
 	struct sgn_cam   cam;
 
 	gfx_init();
-	geom_init();
+	cache_populate();
 	scene_init(&S);
 	sgn_cam_init(&cam, "cam");
+	tzarray_p_init(&_nodes);
+	tzarray_p_pushv(&_nodes, &cylinder);
+	tzarray_p_pushv(&_nodes, &sphere);
+	tzarray_p_pushv(&_nodes, &plane);
+	tzarray_p_pushv(&_nodes, &cone);
+	tzarray_p_pushv(&_nodes, &lamp);
+	tzarray_p_pushv(&_nodes, &spot);
 
 	glShadeModel(GL_SMOOTH);
 	glEnable(GL_POLYGON_SMOOTH); 
+#if 0
 	glEnable(GL_COLOR_MATERIAL);
-
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+#endif
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_LIGHTING);
-	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 #if 0
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
 #endif
-	sgn_geom_dup(&sphere,  &_sphere32x32);
-	sgn_geom_dup(&plane,   &_plane32);
-	sgn_geom_dup(&cylinder,&_cylinder32x32);
+	sgn_geom_init(&sphere,   "sphere",
+			cache_get("/geom/sphere"),
+			cache_get("/mat/default"));
+	sgn_geom_init(&plane,    "plane",
+			cache_get("/geom/plane"),
+			cache_get("/mat/default"));
+	sgn_geom_init(&cylinder, "cylinder",
+			cache_get("/geom/cylinder"),
+			cache_get("/mat/default"));
+	sgn_geom_init(&cone,     "cone",
+			cache_get("/geom/cone"),
+			cache_get("/mat/default"));
 
 	sgn_light_init(&lamp, "lamp");
+	sgn_light_init(&spot, "spot");
 
 	sgn_addchild(root, &cylinder.base);
 	sgn_addchild(root, &sphere.base);
 
-	sgn_addchild(&plane.base, &cam.base);
+	/* set lookat object */
+	sgn_cam_attach(&cam, &plane.base);
+	sgn_addchild(&plane.base, &spot.base);
+
 	sgn_addchild(&cylinder.base, &lamp.base);
 	sgn_addchild(&cylinder.base, &plane.base);
+	sgn_addchild(&plane.base, &cone.base);
 
-	sgn_translate(&lamp.base, tzv4_mkp(10, 0, 10));
-	sgn_translate(&cam.base,  tzv4_mkp(1 , 0, 1 ));
+	sgn_translate(&spot.base, tzv4_mkp(0, 1, 0));
+	sgn_rotate(&spot.base, M_PI, tzv4_mkp(1, 0, 0));
+	spot.light.spot_cutoff = 20;
+
+	sgn_rotate(&spot.base, M_PI/3, tzv4_mkp(1, 0, 0));
+	sgn_translate(&spot.base, tzv4_mkp(1, -2, 1));
+
+
+	sgn_translate(&lamp.base, tzv4_mkp(1, 3, 1));
+	sgn_translate(&plane.base, tzv4_mkp(0, 2, 0));
 	sgn_translate(&sphere.base, tzv4_mkp( 1.0, 0.0, 0.0));
-	sgn_translate(&plane.base,  tzv4_mkp(0.0, 0.0, 1.0));
+	sgn_translate(&cone.base, tzv4_mkp(0, 1, 0));
 
 	scene_setcam(&S, &cam.base);
+	glfwSetKeyCallback(_window, key_callback);
 
+	key_callback(_window, 0, 0, 0, 0);
 	while (!glfwWindowShouldClose(_window)) {
 		double t0 = glfwGetTime();
 		double s = sin(t0), c = cos(t0);
-
+#if 0
 		tzm4_lookat(&sgn_base_I(&cam.base),
-				tzv4_mkp(s, 1, c),
+				tzv4_mkp(3*s, 3, 3*c),
 				tzv4_mkp(0, 0, 0),
 				tzv4_mkp(0, 1, 0));
+#endif
+		sgn_rotate(&spot.base, 0.001, tzv4_mkp(1*s, 0, 1*c));
+#if 0
+		sgn_rotate(&sphere.base, 0.1, tzv4_mkp(1, 0, 0));
+#endif
 		scene_draw(&S);
-
-		/* load back original V */
-		glLoadMatrixf(sgn_base_to(&S.root).f);
-		sg_core_axes();
 
 		glfwSwapBuffers(_window);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -80,13 +168,6 @@ int main(int argc, char *argv[]) {
 	return 0;
 }
 
-/* ========================================================================== */
-static void geom_init(void) {
-	sgn_geom_mksphere  (&_sphere32x32, "sphere", 32, 32);
-	sgn_geom_mkplane   (&_plane32, "plane", 32);
-	sgn_geom_mkcylinder(&_cylinder32x32, "cylinder", 32, 32);
-	sgn_geom_mkcone    (&_cone32x32, "cone", 32, 32);
-}
 /* ========================================================================== */
 
 static void gfx_init(void) {
@@ -120,9 +201,11 @@ static void reshape(GLFWwindow *win, int w, int h) {
 }
 
 void sg_core_axes(void) {
+	glDisable(GL_LIGHTING);
         glBegin(GL_LINES);
         glColor3f(1, 0, 0); glVertex3f(0, 0, 0);glVertex3f(1, 0, 0);
         glColor3f(0, 1, 0); glVertex3f(0, 0, 0);glVertex3f(0, 1, 0);
         glColor3f(0, 0, 1); glVertex3f(0, 0, 0);glVertex3f(0, 0, 1);
         glEnd();
+	glEnable(GL_LIGHTING);
 }

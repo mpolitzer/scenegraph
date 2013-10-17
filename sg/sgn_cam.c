@@ -17,7 +17,7 @@ static struct sgn_vtbl sgn_cam_vtbl = {
 
 struct sgn_cam *sgn_cam_init(T *self, const char *name) {
 	sgn_base_init(&self->base, &sgn_cam_vtbl);
-	sgn_base_setname(&self->base, name);
+	sgn_base_name(&self->base) = name;
 	return self;
 }
 
@@ -34,4 +34,8 @@ void sgn_cam_setup(T *self, struct scene *scene) {
 		tzm4_mulm(&V, &V, &sgn_base_I(tmp));
 	}
 	sgn_base_to(&scene->root) = V;
+}
+
+void sgn_cam_attach(T *self, struct sgn_base *parent) {
+	sgn_base_parent(&self->base) = parent;
 }

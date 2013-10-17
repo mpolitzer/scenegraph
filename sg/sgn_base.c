@@ -72,6 +72,18 @@ bool sgn_isbase(struct sgn_base *self) {
 	return self->vtbl == &sgn_base_vtbl;
 }
 
+T *sgn_translate(T *self, tzv4 v) {
+	tzm4_translate(&sgn_base_T(self),            v );
+	tzm4_translate(&sgn_base_I(self), tzv4_minus(v));
+	return self;
+}
+
+T *sgn_rotate(T *self, double theta, tzv4 v) {
+	tzm4_rotate(&sgn_base_T(self),  theta, v);
+	tzm4_rotate(&sgn_base_I(self), -theta, v);
+	return self;
+}
+
 /* vtable boiler plate */
 void sgn_pre_draw(T *self, struct scene *scene) {
 	self->vtbl->pre_draw(self, scene);
@@ -90,15 +102,5 @@ void sgn_addchild(T *self, struct sgn_base *child) {
 }
 void sgn_update(T *self, uint16_t ms) {
 	self->vtbl->update(self, ms);
-}
-
-T *sgn_translate(T *self, tzv4 v) {
-	tzm4_translate(&sgn_base_T(self),            v );
-	tzm4_translate(&sgn_base_I(self), tzv4_minus(v));
-}
-
-T *sgn_rotate(T *self, double theta, tzv4 v) {
-	tzm4_rotate(&sgn_base_T(self),  theta, v);
-	tzm4_rotate(&sgn_base_I(self), -theta, v);
 }
 

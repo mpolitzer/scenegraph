@@ -1,24 +1,31 @@
-CPATH=-I. -I3rd/tzlib -I3rd/glfw/include/
-#GL=shader.c shader.h util.c opengl.h
-#DS=oco_string.c oco_string.h
-#SRLA=srv4_sse.c srm4_sse.c
-#GEOM=sphere.c sphere.h vertex.h
-#RESOURCES=$(addprefix gfx/, ${GL})\
-#	  $(addprefix cds/, ${DS})\
-#	  $(addprefix la/, ${SRLA})\
-#	  $(addprefix geom/, ${GEOM})\
-#	  main.c
+CPATH=-I.\
+      -I3rd/tzlib\
+      -I3rd/glfw/include/\
+      -I3rd/SOIL/src/
 
 SG=scene.c  scene.h\
    sgn_base.c  sgn_base.h\
    sgn_light.c sgn_light.h\
    sgn_geom.c  sgn_geom.h\
-   sgn_cam.c   sgn_cam.h
-TZMATH= tzm4_sse.c tzv2_sse.c tzv3_sse.c tzv4_sse.c tzmath.h
+   sgn_cam.c   sgn_cam.h\
+   geometry.c  geometry.h\
+   material.c  material.h\
+   cache.c     cache.h
+TZMATH= tzm4_sse.c\
+	tzv2_sse.c\
+	tzv3_sse.c\
+	tzv4_sse.c\
+	tzmath.h
+SOIL=image_DXT.c     image_DXT.h\
+     image_helper.c  image_helper.h\
+     stb_image_aug.c stb_image_aug.h\
+     SOIL.c          SOIL.h
+
 # .c, .h, .S
 RESOURCES=\
 	  $(addprefix sg/, ${SG})\
 	  $(addprefix 3rd/tzlib/tzmath/, ${TZMATH})\
+	  $(addprefix 3rd/SOIL/src/, ${SOIL})\
 	  main.c
 
 SRC=$(filter %.c, ${RESOURCES})
