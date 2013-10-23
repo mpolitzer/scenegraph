@@ -73,6 +73,9 @@ static void cache_populate(void) {
 	cache_put("/tex/city", texture_init(NEW_T,
 				GL_TEXTURE_2D,
 				"city1_1.png"));
+	cache_put("/tex/cloud", texture_init(NEW_T,
+				GL_TEXTURE_2D,
+				"cloud.png"));
 #undef NEW_T
 }
 
@@ -278,6 +281,7 @@ void mkscene(struct scene *S) {
 	struct sgn_geom *bb;
 	struct sgn_light *l, *spot;
 	struct sgn_cam  *cam;
+	struct sgn_base *clouds;
 
 	cache_populate();
 	scene_init(S);
@@ -343,13 +347,28 @@ void mkscene(struct scene *S) {
 	sgn_rotate(&spot->base, M_PI, tzv4_mkp(1, 0, 0));
 	sgn_addchild(&ttop->base, &spot->base);
 
-	/* bb */
+	/* group of clouds */
+	sgn_base_init(clouds = malloc(sizeof(*clouds)), NULL);
+	sgn_translate(clouds, tzv4_mkp( 4, 4, 0));
+	sgn_addchild(&ttop->base, clouds);
+
+	/* cloud0 */
 	sgn_bb_init(bb = malloc(sizeof(*bb)), "bb",
 			cache_get("/geom/plane"),
-			cache_get("/mat/copper"),
-			NULL);
-	sgn_translate(&bb->base, tzv4_mkp(4, 4, 0));
-	sgn_addchild(&ball->base, &bb->base);
+			cache_get("/mat/white"),
+			cache_get("/tex/cloud"));
+	sgn_translate(&bb->base, tzv4_mkp(-.5, 0, 0));
+	sgn_geom_scale(bb, tzv4_mkp(1, 1, 3));
+	sgn_addchild(clouds, &bb->base);
+
+	/* cloud1 */
+	sgn_bb_init(bb = malloc(sizeof(*bb)), "bb",
+			cache_get("/geom/plane"),
+			cache_get("/mat/white"),
+			cache_get("/tex/cloud"));
+	sgn_translate(&bb->base, tzv4_mkp(.5, 0.1, 0));
+	sgn_geom_scale(bb, tzv4_mkp(1, 1, 3));
+	sgn_addchild(clouds, &bb->base);
 
 	/* notes to iterate lookat */
 	tzarray_p_pushv(&_nodes, &bb->base);
