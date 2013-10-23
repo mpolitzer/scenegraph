@@ -3,11 +3,7 @@
 
 typedef struct sgn_geom T;
 
-static void sgn_geom_pre_draw(struct sgn_base *_self, struct scene *scene) {
-	sgn_base_pre_draw(_self, scene);
-}
-
-static void sgn_geom_draw(struct sgn_base *_self, struct scene *scene) {
+void sgn_geom_draw(struct sgn_base *_self, struct scene *scene) {
 	tzm4 tmp;
 	T *self = (T *)_self;
 	assert(sgn_isgeom(self) && "node is not a sgn_geom, fix vtbl.");
@@ -26,14 +22,10 @@ static void sgn_geom_draw(struct sgn_base *_self, struct scene *scene) {
 	sgn_base_draw(&self->base, scene);
 }
 
-static void sgn_geom_post_draw(struct sgn_base *_self, struct scene *scene) {
-	sgn_base_post_draw(_self, scene);
-}
-
 static struct sgn_vtbl sgn_geom_vtbl = {
-	.pre_draw  = sgn_geom_pre_draw,
+	.pre_draw  = sgn_base_pre_draw,
 	.draw      = sgn_geom_draw,
-	.post_draw = sgn_geom_post_draw,
+	.post_draw = sgn_base_post_draw,
 	.isvisible = sgn_base_isvisible,
 	.addchild  = sgn_base_addchild,
 	.update    = sgn_base_update,
@@ -57,6 +49,10 @@ void sgn_geom_scale(T *self, tzv4 v) {
 
 void sgn_geom_translate(T *self, tzv4 v) {
 	tzm4_translate(&sgn_geom_localT(self), v);
+}
+
+void sgn_geom_rotate(T *self, float theta, tzv4 v) {
+	tzm4_rotate(&sgn_geom_localT(self), theta, v);
 }
 
 bool sgn_isgeom(T *self) {

@@ -30,8 +30,17 @@ void sgn_geom_init(
 		struct geometry *geom,
 		struct material *mat,
 		struct texture *tex);
+void sgn_geom_translate(
+		struct sgn_geom *self,
+		tzv4 v);
+void sgn_geom_rotate(
+		struct sgn_geom *self,
+		float theta,
+		tzv4 v);
 void sgn_geom_scale(
 		struct sgn_geom *self,
 		tzv4 v);
+
+void sgn_geom_draw(struct sgn_base *_self, struct scene *scene);
 
 #endif /* SGN_GEOM_H */

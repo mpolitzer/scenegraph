@@ -11,6 +11,7 @@
 #include <sg/sgn_geom.h>
 #include <sg/sgn_light.h>
 #include <sg/sgn_cam.h>
+#include <sg/sgn_bb.h>
 
 #include <sg/cam_ctl.h>
 
@@ -136,7 +137,6 @@ void mouse_callback(GLFWwindow *window, double x, double y) {
 		_ctl.theta += 2*M_PI*dx/h;
 		cam_ctl_update((struct sgn_cam *)S.active_cam, &_ctl);
 	}
-	printf("%f %f\n", dx, dy);
 }
 
 void scroll_callback(GLFWwindow *window, double xoff, double yoff) {
@@ -219,7 +219,7 @@ struct sgn_geom *mkabajour(void) {
 			cache_get("/geom/cylinder"),
 			cache_get("/mat/bplastic"),
 			NULL);
-	sgn_geom_scale(lh0, tzv4_mkp(0.1, 0.1, 0.1));
+	sgn_geom_scale(lh0, tzv4_mkp(0.06, 0.1, 0.06));
 	sgn_geom_translate(lh0, tzv4_mkp(0.0, 0.5, 0));
 	sgn_rotate(&lh0->base, M_PI/6, tzv4_mkp(1, 0, 0));
 	sgn_addchild(&lbasej->base, &lh0->base);
@@ -237,7 +237,7 @@ struct sgn_geom *mkabajour(void) {
 			cache_get("/geom/cylinder"),
 			cache_get("/mat/bplastic"),
 			NULL);
-	sgn_geom_scale(lh1, tzv4_mkp(0.1, 0.1, 0.1));
+	sgn_geom_scale(lh1, tzv4_mkp(0.06, 0.1, 0.06));
 	sgn_geom_translate(lh1, tzv4_mkp(0.0, 0.5, 0));
 	sgn_rotate(&lh1->base, M_PI/6, tzv4_mkp(1, 0, 0));
 	sgn_addchild(&lj0->base, &lh1->base);
@@ -275,6 +275,7 @@ struct sgn_geom *mkabajour(void) {
 void mkscene(struct scene *S) {
 	struct sgn_base *root;
 	struct sgn_geom *ball, *ttop, *floor, *wall0, *wall1, *abajour;
+	struct sgn_geom *bb;
 	struct sgn_light *l, *spot;
 	struct sgn_cam  *cam;
 
@@ -342,9 +343,18 @@ void mkscene(struct scene *S) {
 	sgn_rotate(&spot->base, M_PI, tzv4_mkp(1, 0, 0));
 	sgn_addchild(&ttop->base, &spot->base);
 
+	/* bb */
+	sgn_bb_init(bb = malloc(sizeof(*bb)), "bb",
+			cache_get("/geom/plane"),
+			cache_get("/mat/copper"),
+			NULL);
+	sgn_translate(&bb->base, tzv4_mkp(4, 4, 0));
+	sgn_addchild(&ball->base, &bb->base);
+
 	/* notes to iterate lookat */
-	tzarray_p_pushv(&_nodes, &l->base);
+	tzarray_p_pushv(&_nodes, &bb->base);
 	tzarray_p_pushv(&_nodes, &ball->base);
+	tzarray_p_pushv(&_nodes, &l->base);
 	tzarray_p_pushv(&_nodes, &floor->base);
 
 	sgn_cam_attach( (struct sgn_cam *)cam,
@@ -371,7 +381,7 @@ int main(int argc, char *argv[]) {
 #endif
 	glEnable(GL_LIGHTING);
 	glEnable(GL_DEPTH_TEST);
-#if 1
+#if 0
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
 #else
@@ -435,6 +445,19 @@ void sg_core_axes(void) {
         glColor3f(0, 0, 1); glVertex3f(0, 0, 0);glVertex3f(0, 0, 1);
         glEnd();
 	glEnable(GL_LIGHTING);
+}
+
+void sg_core_axes_in(tzm4 *to) {
+	glPushMatrix();
+	glLoadMatrixf(to->f);
+	glDisable(GL_LIGHTING);
+        glBegin(GL_LINES);
+        glColor3f(1, 0, 0); glVertex3f(0, 0, 0);glVertex3f(1, 0, 0);
+        glColor3f(0, 1, 0); glVertex3f(0, 0, 0);glVertex3f(0, 1, 0);
+        glColor3f(0, 0, 1); glVertex3f(0, 0, 0);glVertex3f(0, 0, 1);
+        glEnd();
+	glEnable(GL_LIGHTING);
+	glPopMatrix();
 }
 
 void sg_core_plane(void) {

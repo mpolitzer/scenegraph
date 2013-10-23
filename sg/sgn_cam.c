@@ -23,11 +23,15 @@ bool sgn_iscam(struct sgn_cam *self) {
 
 void sgn_cam_setup(T *self, struct scene *scene) {
 	tzm4 *V = &sgn_base_to(&scene->root);
+	tzm4 *I = &sgn_base_from(&scene->root);
 	struct sgn_base *tmp;
 
 	assert(sgn_iscam(self));
-	for (tzm4_mkiden(V), tmp = &self->base; tmp; tmp = tmp->parent) {
+	tzm4_mkiden(V);
+	tzm4_mkiden(I);
+	for (tmp = &self->base; tmp; tmp = tmp->parent) {
 		tzm4_mulm(V, V, &sgn_base_I(tmp));
+		tzm4_mulm(I, I, &sgn_base_T(tmp));
 	}
 }
 

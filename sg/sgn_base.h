@@ -41,6 +41,7 @@ void             sgn_base_setname(struct sgn_base *self, const char *name);
 const char      *sgn_base_getname(struct sgn_base *self);
 bool             sgn_isbase      (struct sgn_base *self);
 struct sgn_vtbl *sgn_base_getvtbl(struct sgn_base *self);
+void             sgn_base_setvtbl(struct sgn_base *self, struct sgn_vtbl *tbl);
 
 struct sgn_base *sgn_translate(struct sgn_base *self,               tzv4 v);
 struct sgn_base *sgn_rotate   (struct sgn_base *self, double theta, tzv4 v);

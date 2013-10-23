@@ -11,8 +11,8 @@ void sgn_base_pre_draw(T *self, struct scene *scene) {
 				&sgn_base_to(self->parent),
 				&sgn_base_T(self));
 		tzm4_mulm(      &sgn_base_from(self),
-				&sgn_base_from(self->parent),
-				&sgn_base_I(self));
+				&sgn_base_I(self),
+				&sgn_base_from(self->parent));
 	}
 	tzarray_p_foreach_t(kid, &self->kids, T*) {
 		sgn_pre_draw(*kid, scene);
@@ -66,6 +66,10 @@ void sgn_base_init(T *self, struct sgn_vtbl *vtbl) {
 	tzm4_mkiden(&self->to);
 	tzm4_mkiden(&self->from);
 }
+void sgn_base_setvtbl(T *self, struct sgn_vtbl *tbl) {
+	self->vtbl = tbl;
+}
+
 struct sgn_vtbl *sgn_base_getvtbl(T *self) {
 	return self->vtbl;
 }

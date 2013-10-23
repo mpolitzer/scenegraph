@@ -8,6 +8,7 @@ SG=scene.c  scene.h\
    sgn_light.c sgn_light.h\
    sgn_geom.c  sgn_geom.h\
    sgn_cam.c   sgn_cam.h\
+   sgn_bb.c    sgn_bb.h\
    geometry.c  geometry.h\
    material.c  material.h\
    texture.c   texture.h\
