@@ -82,14 +82,20 @@ bool sgn_isbase(struct sgn_base *self) {
 }
 
 T *sgn_translate(T *self, tzv4 v) {
-	tzm4_translate(&sgn_base_T(self),            v );
-	tzm4_translate(&sgn_base_I(self), tzv4_minus(v));
+	tzm4_translate(&sgn_base_T(self),                v );
+	tzm4_inverse  (&sgn_base_I(self), &sgn_base_T(self));
 	return self;
 }
 
 T *sgn_rotate(T *self, double theta, tzv4 v) {
 	tzm4_rotate(&sgn_base_T(self),  theta, v);
-	tzm4_rotate(&sgn_base_I(self), -theta, v);
+	tzm4_inverse(&sgn_base_I(self), &sgn_base_T(self));
+	return self;
+}
+
+T *sgn_scale(T *self, tzv4 v) {
+	tzm4_scale  (&sgn_base_T(self), v);
+	tzm4_inverse(&sgn_base_I(self), &sgn_base_T(self));
 	return self;
 }
 

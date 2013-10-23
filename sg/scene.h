@@ -3,12 +3,14 @@
 
 #include <sg/sgn_base.h>
 #include <sg/sgn_cam.h>
+#include <sg/scene_env.h>
 #include <tzmath/tzmath.h>
 #include <sg/ds/tzarray_m4.h>
 
 struct scene {
 	struct sgn_base root;
 	struct sgn_base *active_cam;
+	struct scene_env env;
 };
 
 enum render_pass {

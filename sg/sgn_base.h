@@ -44,6 +44,7 @@ struct sgn_vtbl *sgn_base_getvtbl(struct sgn_base *self);
 
 struct sgn_base *sgn_translate(struct sgn_base *self,               tzv4 v);
 struct sgn_base *sgn_rotate   (struct sgn_base *self, double theta, tzv4 v);
+struct sgn_base *sgn_scale    (struct sgn_base *self,               tzv4 v);
 
 /* base virtual methods */
 void sgn_base_pre_draw (struct sgn_base *self, struct scene *scene);

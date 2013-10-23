@@ -4,7 +4,7 @@
 struct vertex_332 {
 	tzv3 pos;
 	tzv3 normal;
-	tzv2 texcoord;
+	tzv3 texcoord;
 };
 
 void geometry_mksurface(struct geometry *self, uint16_t dx, uint16_t dy,
@@ -54,9 +54,6 @@ void geometry_mksurface(struct geometry *self, uint16_t dx, uint16_t dy,
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
 	glBufferData(GL_ARRAY_BUFFER, sz, vert, GL_STATIC_DRAW);
 
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-
 	free(inds);
 	free(vert);
 
@@ -70,17 +67,18 @@ void geometry_mksurface(struct geometry *self, uint16_t dx, uint16_t dy,
 static void polar(float theta, float phi, struct vertex_332 *vert) {
 	/* phi -> [0, PI], theta -> [-PI, PI] */
 	float r  = 0.5;
-	float sp = sin(M_PI*(phi-0.5)), st = sin(2*M_PI*theta);
-	float cp = cos(M_PI*(phi-0.5)), ct = cos(2*M_PI*theta);
+	float sp  = sin(M_PI*(phi-0.5)),  st = sin(2*M_PI*theta);
+	float cp  = cos(M_PI*(phi-0.5)),  ct = cos(2*M_PI*theta);
+
 	vert->pos      = tzv3_mk(r*ct*sp,   r*cp,   r*sp*st);
-	vert->normal   = tzv3_mk(  ct*sp,     cp,     sp*st);
-	vert->texcoord = tzv2_mk(r*ct*sp+r,         r*sp*st+r);
+	vert->normal   = tzv3_mk( ct*sp,    cp, sp*st);
+	vert->texcoord = tzv3_mk(-theta+0.5,-phi+0.5, 0);
 }
 
 static void plane(float di, float dj, struct vertex_332 *vert) {
-	vert->pos      = tzv3_mk(di, 0, dj);
-	vert->normal   = tzv3_mk(0,  1,  0);
-	vert->texcoord = tzv2_mk(di,    dj);
+	vert->pos      = tzv3_mk(    di,      0, dj);
+	vert->normal   = tzv3_mk(     0,      1,  0);
+	vert->texcoord = tzv3_mk(di+0.5, dj+0.5,  0);
 }
 
 static void cylinder(float theta, float slices, struct vertex_332 *vert) {
@@ -89,8 +87,8 @@ static void cylinder(float theta, float slices, struct vertex_332 *vert) {
 	const float  r = 0.5;
 
 	vert->pos      = tzv3_mk(r*ct, slices, r*st);   /* -0.5 to 0.5 */
-	vert->normal   = tzv3_mk(  ct,   0,      st);       /* -1.0 to 1.0 */
-	vert->texcoord = tzv2_mk(ct+0.5, st+0.5);       /*  0   to 1.0 */
+	vert->normal   = tzv3_mk(  ct,   0,      st);   /* -1.0 to 1.0 */
+	vert->texcoord = tzv3_mk(ct+0.5, slices, 0);    /*  0   to 1.0 */
 }
 
 static void cone(float theta, float slices, struct vertex_332 *vert) {
@@ -100,7 +98,7 @@ static void cone(float theta, float slices, struct vertex_332 *vert) {
 	slices = 0.5*(slices+0.5);
 	vert->pos      = tzv3_mk(slices*ct, slices, slices*st);   /* -0.5 to 0.5 */
 	vert->normal   = tzv3_mk(  ct,      slices,        st);   /* -1.0 to 1.0 */
-	vert->texcoord = tzv2_mk(ct+0.5, st+0.5);                 /*  0   to 1.0 */
+	vert->texcoord = tzv3_mk(ct+0.5, st+0.5, 0);              /*  0   to 1.0 */
 }
 
 void geometry_init(struct geometry *self) {
@@ -136,26 +134,19 @@ geometry_mkcone(struct geometry *self, uint16_t theta, uint16_t slices) {
 /* get the member offset */
 #define _t(_member) (&((struct vertex_332*)0)->_member)
 void geometry_draw(struct geometry *self, tzm4 *to_world) {
-
 	glLoadMatrixf(to_world->f);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self->ibo);
+
 	glBindBuffer(GL_ARRAY_BUFFER, self->vbo);
+
+	glEnableClientState(GL_VERTEX_ARRAY);
+	glEnableClientState(GL_NORMAL_ARRAY);
+	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 
 	glVertexPointer  (3, GL_FLOAT, sizeof(struct vertex_332), _t(pos));
 	glNormalPointer  (   GL_FLOAT, sizeof(struct vertex_332), _t(normal));
-	glTexCoordPointer(2, GL_FLOAT, sizeof(struct vertex_332), _t(texcoord));
+	glTexCoordPointer(3, GL_FLOAT, sizeof(struct vertex_332), _t(texcoord));
 
-	glEnableClientState(GL_INDEX_ARRAY);
-	glEnableClientState(GL_VERTEX_ARRAY);
-	glEnableClientState(GL_NORMAL_ARRAY);
-
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self->ibo);
 	glDrawElements(GL_TRIANGLE_STRIP, self->n, GL_UNSIGNED_SHORT, 0);
-
-	glDisableClientState(GL_NORMAL_ARRAY);
-	glDisableClientState(GL_VERTEX_ARRAY);
-	glDisableClientState(GL_INDEX_ARRAY);
-
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
 #undef _t

@@ -2,13 +2,9 @@
 
 typedef struct sgn_cam T;
 
-static void sgn_cam_draw(struct sgn_base *_self, struct scene *scene) {
-	sgn_base_draw(_self, scene);
-}
-
 static struct sgn_vtbl sgn_cam_vtbl = {
 	.pre_draw  = sgn_base_pre_draw,
-	.draw      = sgn_cam_draw,
+	.draw      = sgn_base_draw,
 	.post_draw = sgn_base_post_draw,
 	.isvisible = sgn_base_isvisible,
 	.addchild  = sgn_base_addchild,

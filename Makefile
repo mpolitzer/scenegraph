@@ -10,8 +10,11 @@ SG=scene.c  scene.h\
    sgn_cam.c   sgn_cam.h\
    geometry.c  geometry.h\
    material.c  material.h\
+   texture.c   texture.h\
    light.c     light.h\
-   cache.c     cache.h
+   cache.c     cache.h\
+   cam_ctl.c   cam_ctl.h\
+   scene_env.c scene_env.h
 TZMATH= tzm4_sse.c\
 	tzv2_sse.c\
 	tzv3_sse.c\
