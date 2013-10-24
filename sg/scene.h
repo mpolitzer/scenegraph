@@ -5,7 +5,6 @@
 #include <sg/sgn_cam.h>
 #include <sg/scene_env.h>
 #include <tzmath/tzmath.h>
-#include <sg/ds/tzarray_m4.h>
 
 struct scene {
 	struct sgn_base root;

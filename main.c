@@ -5,6 +5,7 @@
 #include <sg/gl/backend.h>
 
 #include <sg/cache.h>
+#include <sg/geometry.h>
 #include <sg/material.h>
 #include <sg/texture.h>
 
@@ -25,6 +26,7 @@ static struct cam_ctl _ctl = { .r = 1, .phi = 1, .theta = M_PI/2 };
 static GLFWwindow *_window;
 struct tzarray_p_t _nodes;
 struct sgn_base *_node;
+struct sgn_base *_lbase, *_ldome, *_ball;
 
 static void gfx_init(void);
 static void gfx_fini(void);
@@ -76,6 +78,9 @@ static void cache_populate(void) {
 	cache_put("/tex/cloud", texture_init(NEW_T,
 				GL_TEXTURE_2D,
 				"cloud.png"));
+	cache_put("/tex/flare", texture_init(NEW_T,
+				GL_TEXTURE_2D,
+				"flare.png"));
 #undef NEW_T
 }
 
@@ -83,6 +88,7 @@ static void key_callback(GLFWwindow* window,
 		int key, int scancode,
 		int action, int mods) {
 	static int focus=0;
+	static bool fog = false;
 
 	bool action_mask = (action == GLFW_PRESS || action == GLFW_REPEAT);
 
@@ -105,12 +111,28 @@ static void key_callback(GLFWwindow* window,
 				(mode==1) ? GL_LINE  : GL_FILL);
 		mode = (mode+1) % 3;
 	}
+	if (key == GLFW_KEY_T && action == GLFW_PRESS) {
+		S.env.filter = (S.env.filter+1) % 3;
+		if (fog) scene_env_fog_enable(&S.env);
+		printf("fog filter %d\n", S.env.filter);
+	}
 	if (key == GLFW_KEY_F && action == GLFW_PRESS) {
-		static bool fog = true;
-		if (fog) scene_env_enable_fog(&S);
-		else     scene_env_disable_fog();
 		fog = !fog;
 		printf("fog %d\n", fog);
+		if (fog) scene_env_fog_enable(&S.env);
+		else     scene_env_fog_disable(&S.env);
+	}
+	if (key == GLFW_KEY_UP && action_mask) {
+		sgn_rotate(_ldome, 0.1, tzv4_mkp(1, 0, 0));
+	}
+	if (key == GLFW_KEY_DOWN && action_mask) {
+		sgn_rotate(_ldome, 0.1, tzv4_mkp(-1, 0, 0));
+	}
+	if (key == GLFW_KEY_RIGHT && action_mask) {
+		sgn_rotate(_lbase, 0.1, tzv4_mkp(0, 1, 0));
+	}
+	if (key == GLFW_KEY_LEFT && action_mask) {
+		sgn_rotate(_lbase, 0.1, tzv4_mkp(0, -1, 0));
 	}
 	if (key == GLFW_KEY_R && action_mask) {
 		tzm4_mkrows(&sgn_base_I(S.active_cam),
@@ -263,8 +285,9 @@ struct sgn_geom *mkabajour(void) {
 	sgn_rotate(&ldome->base, M_PI/30, tzv4_mkp(1, 0, 0));
 	sgn_addchild(&lj1->base, &ldome->base);
 
-	tzarray_p_pushv(&_nodes, &lj1->base);
-	_node = &lbase->base;
+	tzarray_p_pushv(&_nodes, &ldome->base);
+	_lbase = &lbase->base;
+	_ldome = &lj1->base;
 
 	sgn_light_init(lamp = malloc(sizeof(*lamp)), "llamp");
 	lamp->light.diffuse = tzv4_mkp(0.8, 0.8, 0.8);
@@ -277,7 +300,7 @@ struct sgn_geom *mkabajour(void) {
 
 void mkscene(struct scene *S) {
 	struct sgn_base *root;
-	struct sgn_geom *ball, *ttop, *floor, *wall0, *wall1, *abajour;
+	struct sgn_geom *ball, *ball1, *ttop, *floor, *wall0, *wall1, *abajour;
 	struct sgn_geom *bb;
 	struct sgn_light *l, *spot;
 	struct sgn_cam  *cam;
@@ -333,6 +356,16 @@ void mkscene(struct scene *S) {
 	sgn_geom_scale(ball, tzv4_mkp(0.1, 0.1, 0.1));
 	sgn_translate(&ball->base, tzv4_mkp(0, 0.05, 0));
 	sgn_addchild(&ttop->base, &ball->base);
+	_ball = &ball->base;
+
+	/* ball1 */
+	sgn_geom_init(ball1 = malloc(sizeof(*ball1)), "ball",
+			cache_get("/geom/sphere"),
+			cache_get("/mat/copper"),
+			NULL);
+	sgn_geom_scale(ball1, tzv4_mkp(0.03, 0.03, 0.03));
+	sgn_translate(&ball1->base, tzv4_mkp(0.2, 0.0, 0));
+	sgn_addchild(&ball->base, &ball1->base);
 
 	/* light */
 	sgn_light_init(l = malloc(sizeof(*l)), "global");
@@ -380,19 +413,58 @@ void mkscene(struct scene *S) {
 			(struct sgn_base *)tzarray_p_getp(&_nodes)[0]);
 }
 
+void one_up_hack(void) {
+#if 0
+	tzm4 tmp, P, V;
+	tzm4 *veI = &sgn_base_to(S.active_cam);
+	tzm4 *vp  = &sgn_base_to(_ldome);
+
+	struct geometry *geom = cache_get("/geom/plane");
+	struct texture *tex   = cache_get("/tex/city");
+	struct material *mat  = cache_get("/mat/white");
+
+	tzm4_perspective(&P, 90., 800/(float)600, 0.1, 100);
+
+	tzm4_mkiden(&tmp);
+	glMatrixMode(GL_TEXTURE);
+	tzm4_lookat(&V, tzv4_mkp(1, 1, 1),
+			tzv4_mkp(0, 0, 0),
+			tzv4_mkp(0, 1, 0));
+	tzm4_mulm(&tmp, &tmp, veI);
+	tzm4_mulm(&tmp, &V, &tmp);
+	tzm4_mulm(&tmp, &P, &tmp);
+	glLoadMatrixf(tmp.f);
+
+	glMatrixMode(GL_MODELVIEW);
+	texture_load(tex);
+
+	glEnable(GL_TEXTURE_GEN_S);
+	glEnable(GL_TEXTURE_GEN_T);
+	glEnable(GL_TEXTURE_GEN_R);
+	glEnable(GL_TEXTURE_GEN_Q);
+	glTexGeni(GL_S, GL_TEXTURE_GEN_MODE, GL_EYE_LINEAR);
+	glTexGeni(GL_T, GL_TEXTURE_GEN_MODE, GL_EYE_LINEAR);
+	glTexGeni(GL_R, GL_TEXTURE_GEN_MODE, GL_EYE_LINEAR);
+	glTexGeni(GL_Q, GL_TEXTURE_GEN_MODE, GL_EYE_LINEAR);
+
+#endif
+}
+
 int main(int argc, char *argv[]) {
 
 	gfx_init();
 
 	/* make it look prety */
-	glEnable(GL_NORMALIZE);
+	glEnable(GL_ALPHA_TEST);
 	glEnable(GL_BLEND);
+	glEnable(GL_NORMALIZE);
 	glEnable(GL_TEXTURE_2D);
 	glShadeModel(GL_SMOOTH);
 	glEnable(GL_POLYGON_SMOOTH); 
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
 
+	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 #if 0
@@ -414,7 +486,8 @@ int main(int argc, char *argv[]) {
 	mkscene(&S);
 	key_callback(_window, 0, 0, 0, 0);
 	while (!glfwWindowShouldClose(_window)) {
-		sgn_rotate(_node, 0.005, tzv4_mkp(0, 1, 0));
+		one_up_hack();
+		sgn_rotate(_ball, 0.01, tzv4_mkp(0, 1, 0));
 		scene_draw(&S);
 		glfwSwapBuffers(_window);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);

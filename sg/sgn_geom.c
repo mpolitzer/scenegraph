@@ -8,10 +8,12 @@ void sgn_geom_draw(struct sgn_base *_self, struct scene *scene) {
 	T *self = (T *)_self;
 	assert(sgn_isgeom(self) && "node is not a sgn_geom, fix vtbl.");
 
+	tzm4 *cam  = &sgn_base_to(scene->active_cam);
+	/* from world to eye */
+	tzm4_mulm(&tmp, cam, &sgn_base_to(_self));
 	/* apply the localT transformation. */
-	tzm4_mulm(&tmp, &sgn_base_to(_self),
+	tzm4_mulm(&tmp, &tmp,
 			&sgn_geom_localT(self));
-
 	/* TODO: fix bull crap */
 	if (self->mat) material_load  (self->mat);
 	if (self->tex) texture_load   (self->tex);

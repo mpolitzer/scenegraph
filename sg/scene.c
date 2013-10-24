@@ -1,13 +1,11 @@
 #include <sg/scene.h>
-#include <sg/ds/tzarray_m4.inl>
 
 typedef struct scene T;
 
 void scene_init(T *self) {
 	sgn_base_init(&self->root, NULL);
 	sgn_base_setname(&self->root, "root");
-	self->env.fog_density = 0.3;
-	self->env.fog_color   = tzv4_mkp(0.5, 0.5, 0.5);
+	scene_env_fog_init(&self->env);
 }
 
 void scene_draw(T *self) {

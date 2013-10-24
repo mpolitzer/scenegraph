@@ -1,3 +1,4 @@
+#include <sg/scene.h>
 #include <sg/sgn_light.h>
 #include <sg/gl/backend.h>
 
@@ -18,8 +19,11 @@ void sg_core_axes(void) {
 
 void sgn_light_pre_draw(struct sgn_base *_self, struct scene *scene) {
 	T *self = (T *)_self;
+	tzm4 tmp;
+	tzm4 *cam  = &sgn_base_to(scene->active_cam);
+	tzm4_mulm(&tmp, cam, &sgn_base_to(_self));
 	sgn_base_pre_draw(_self, scene);
-	light_load(&self->light, &sgn_base_to(_self));
+	light_load(&self->light, &tmp);
 	sg_core_axes();
 }
 

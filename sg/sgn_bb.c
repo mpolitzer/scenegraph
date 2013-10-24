@@ -4,27 +4,24 @@
 
 typedef struct sgn_geom T;
 
-void sgn_bb_draw(struct sgn_base *_self, struct scene *scene) {
-	struct sgn_base *root = &scene->root;
+static void sgn_bb_draw(struct sgn_base *_self, struct scene *scene) {
+	tzm4 *cam  = &sgn_base_to(scene->active_cam);
 	tzm4 tmp;
 	T *self = (T *)_self;
 
-	tzv4 up    = tzv4_normalize(tzm4_mulv(&sgn_base_to(root), tzv4_mkv(0, 1, 0))),
-	     vdir  = tzv4_normalize(tzm4_mulv(&sgn_base_to(root), tzv4_mkv(1, 0, 0))),
+	tzv4 up    = tzv4_normalize(tzm4_mulv(cam, tzv4_mkv(0, 1, 0))),
+	     vdir  = tzv4_normalize(tzm4_mulv(cam, tzv4_mkv(1, 0, 0))),
 	     right = tzv4_cross(up, right);
-	tzm4_mkcols(&tmp,
-			up,
-			right,
-			vdir,
-			sgn_base_to(_self).c._3
-			);
-#if 1
+	tzm4_mulm(&tmp, cam, &sgn_base_to(_self));
+	/* look at the camera */
+	tzm4_mkcols(&sgn_base_to(_self),
+			up, right, vdir,
+			tmp.c._3);
+
 	/* apply the localT transformation. */
 	tzm4_mulm(&tmp,
-		&tmp,
-		&sgn_geom_localT(self)
-			);
-#endif
+		&sgn_base_to(_self),
+		&sgn_geom_localT(self));
 	/* TODO: fix bull crap */
 	if (self->mat) material_load  (self->mat);
 	if (self->tex) texture_load   (self->tex);
