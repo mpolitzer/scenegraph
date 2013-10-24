@@ -28,13 +28,13 @@ struct sgn_base {
 	tzm4 to, from;  /* world. */
 };
 
-#define sgn_base_name(_self)   ((_self)->name)
-#define sgn_base_parent(_self) ((_self)->parent)
-#define sgn_base_T(_self)      ((_self)->T)
-#define sgn_base_I(_self)      ((_self)->I)
-#define sgn_base_to(_self)     ((_self)->to)
-#define sgn_base_from(_self)   ((_self)->from)
-#define sgn_base_vtbl(_self)   ((_self)->vtbl)
+#define sgn_base_name(_self)   ( (_self)->name)
+#define sgn_base_parent(_self) ( (_self)->parent)
+#define sgn_base_vtbl(_self)   ( (_self)->vtbl)
+#define sgn_base_T(_self)      (&(_self)->T)
+#define sgn_base_I(_self)      (&(_self)->I)
+#define sgn_base_to(_self)     (&(_self)->to)
+#define sgn_base_from(_self)   (&(_self)->from)
 
 void             sgn_base_init   (struct sgn_base *self, struct sgn_vtbl *vtbl);
 void             sgn_base_setname(struct sgn_base *self, const char *name);

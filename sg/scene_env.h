@@ -12,8 +12,8 @@ struct scene_env {
 	uint32_t filter;
 };
 
-void scene_env_init_fog   (struct scene *self);
-void scene_env_enable_fog (struct scene *self);
-void scene_env_disable_fog(struct scene *self);
+void scene_env_fog_init   (struct scene_env *self);
+void scene_env_fog_enable (struct scene_env *self);
+void scene_env_fog_disable(struct scene_env *self);
 
 #endif /* SCENE_ENV_H */

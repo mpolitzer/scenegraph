@@ -16,9 +16,9 @@ void cam_ctl_update(struct sgn_cam *cam, struct cam_ctl *ctl) {
 	      st = sin(ctl->theta), ct = cos(ctl->theta),
 	      r  = ctl->r;
 
-	tzm4_lookat(&sgn_base_I(&cam->base),
+	tzm4_lookat(sgn_base_I(&cam->base),
 			tzv4_mkp(r*ct*sp,   r*cp, r*sp*st),
 			tzv4_mkp( ctl->x, ctl->y,  ctl->z),
 			tzv4_mkp(      0,      1,       0));
-	tzm4_inverse(&sgn_base_T(&cam->base), &sgn_base_I(&cam->base));
+	tzm4_inverse(sgn_base_T(&cam->base), sgn_base_I(&cam->base));
 }

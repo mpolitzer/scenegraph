@@ -47,23 +47,29 @@ static void cache_populate(void) {
 #define NEW_M malloc(sizeof(struct material))
 	cache_put("/mat/default", material_default(NEW_M));
 	cache_put("/mat/white", material_init(NEW_M,
-				tzv4_mkp(0.60, 0.60, 0.60),
-				tzv4_mkp(0.60, 0.60, 0.60),
-				tzv4_mkp(0.60, 0.60, 0.60),
-				tzv4_mkp(0.00, 0.00, 0.00),
+				tzv4_mkp(0.60,   0.60,   0.60),
+				tzv4_mkp(0.60,   0.60,   0.60),
+				tzv4_mkp(0.60,   0.60,   0.60),
+				tzv4_mkp(0.00,   0.00,   0.00),
 				25.6));
 	cache_put("/mat/copper", material_init(NEW_M,
-				tzv4_mkp(0.21, 0.13, 0.05),
-				tzv4_mkp(0.71, 0.43, 0.18),
-				tzv4_mkp(0.39, 0.27, 0.17),
-				tzv4_mkp(0.00, 0.00, 0.00),
+				tzv4_mkp(0.21,   0.13,   0.05),
+				tzv4_mkp(0.71,   0.43,   0.18),
+				tzv4_mkp(0.39,   0.27,   0.17),
+				tzv4_mkp(0.00,   0.00,   0.00),
 				25.6));
 	cache_put("/mat/bplastic", material_init(NEW_M,
-				tzv4_mkp(0.00, 0.00, 0.00),
-				tzv4_mkp(0.00, 0.00, 0.00),
-				tzv4_mkp(0.50, 0.50, 0.50),
-				tzv4_mkp(0.00, 0.00, 0.00),
+				tzv4_mkp(0.00,   0.00,   0.00),
+				tzv4_mkp(0.00,   0.00,   0.00),
+				tzv4_mkp(0.50,   0.50,   0.50),
+				tzv4_mkp(0.00,   0.00,   0.00),
 				32.0));
+	cache_put("/mat/emerald", material_init(NEW_M,
+				tzv4_mkp(0.02150, 0.17450,  0.02150),
+				tzv4_mkp(0.07568, 0.61424,  0.07568),
+				tzv4_mkp(0.63300, 0.727811, 0.63300),
+				tzv4_mkp(0.00,   0.00,   0.00),
+				76.8));
 #undef NEW_M
 #define NEW_T malloc(sizeof(struct texture))
 	cache_put("/tex/grass", texture_init(NEW_T,
@@ -75,10 +81,10 @@ static void cache_populate(void) {
 	cache_put("/tex/city", texture_init(NEW_T,
 				GL_TEXTURE_2D,
 				"city1_1.png"));
-	cache_put("/tex/cloud", texture_init(NEW_T,
+	cache_put("/tex/cloud", texture_lum_init(NEW_T,
 				GL_TEXTURE_2D,
 				"cloud.png"));
-	cache_put("/tex/flare", texture_init(NEW_T,
+	cache_put("/tex/flare", texture_lum_init(NEW_T,
 				GL_TEXTURE_2D,
 				"flare.png"));
 #undef NEW_T
@@ -135,7 +141,7 @@ static void key_callback(GLFWwindow* window,
 		sgn_rotate(_lbase, 0.1, tzv4_mkp(0, -1, 0));
 	}
 	if (key == GLFW_KEY_R && action_mask) {
-		tzm4_mkrows(&sgn_base_I(S.active_cam),
+		tzm4_mkrows(sgn_base_I(S.active_cam),
 				tzv4_mk( 1, 0, 0, 0),
 				tzv4_mk( 0, 0, 1, 0),
 				tzv4_mk( 0,-1, 0, 0),
@@ -196,7 +202,7 @@ struct sgn_geom *mktable(void) {
 			cache_get("/geom/cylinder"),
 			cache_get("/mat/copper"),
 			NULL);
-	tzm4_scale(&sgn_geom_localT(leg),  tzv4_mkp(0.1, 1, 0.1));
+	sgn_geom_scale(leg,  tzv4_mkp(0.1, 1, 0.1));
 	sgn_translate(&leg->base, tzv4_mkp(-0.45, -0.5, 0.45));
 	sgn_addchild(&ttop->base, &leg->base);
 
@@ -205,7 +211,7 @@ struct sgn_geom *mktable(void) {
 			cache_get("/geom/cylinder"),
 			cache_get("/mat/copper"),
 			NULL);
-	tzm4_scale(&sgn_geom_localT(leg),  tzv4_mkp(0.1, 1, 0.1));
+	sgn_geom_scale((leg),  tzv4_mkp(0.1, 1, 0.1));
 	sgn_translate(&leg->base, tzv4_mkp(-0.45, -0.5, -0.45));
 	sgn_addchild(&ttop->base, &leg->base);
 
@@ -214,7 +220,7 @@ struct sgn_geom *mktable(void) {
 			cache_get("/geom/cylinder"),
 			cache_get("/mat/copper"),
 			NULL);
-	tzm4_scale(&sgn_geom_localT(leg),  tzv4_mkp(0.1, 1, 0.1));
+	sgn_geom_scale((leg),  tzv4_mkp(0.1, 1, 0.1));
 	sgn_translate(&leg->base, tzv4_mkp( 0.45, -0.5, -0.45));
 	sgn_addchild(&ttop->base, &leg->base);
 
@@ -301,7 +307,7 @@ struct sgn_geom *mkabajour(void) {
 void mkscene(struct scene *S) {
 	struct sgn_base *root;
 	struct sgn_geom *ball, *ball1, *ttop, *floor, *wall0, *wall1, *abajour;
-	struct sgn_geom *bb;
+	struct sgn_bb *bb;
 	struct sgn_light *l, *spot;
 	struct sgn_cam  *cam;
 	struct sgn_base *clouds;
@@ -318,7 +324,7 @@ void mkscene(struct scene *S) {
 			cache_get("/geom/plane"),
 			cache_get("/mat/copper"),
 			NULL);
-	tzm4_scale(&sgn_geom_localT(floor),  tzv4_mkp(30, 1, 30));
+	sgn_geom_scale(floor,  tzv4_mkp(30, 1, 30));
 	sgn_addchild(root, &floor->base);
 
 	/* wall0 */
@@ -361,7 +367,7 @@ void mkscene(struct scene *S) {
 	/* ball1 */
 	sgn_geom_init(ball1 = malloc(sizeof(*ball1)), "ball",
 			cache_get("/geom/sphere"),
-			cache_get("/mat/copper"),
+			cache_get("/mat/emerald"),
 			NULL);
 	sgn_geom_scale(ball1, tzv4_mkp(0.03, 0.03, 0.03));
 	sgn_translate(&ball1->base, tzv4_mkp(0.2, 0.0, 0));
@@ -391,22 +397,22 @@ void mkscene(struct scene *S) {
 			cache_get("/mat/white"),
 			cache_get("/tex/cloud"));
 	sgn_translate(&bb->base, tzv4_mkp(-.5, 0, 0));
-	sgn_geom_scale(bb, tzv4_mkp(1, 1, 3));
+	sgn_geom_scale((struct sgn_geom*)bb, tzv4_mkp(1, 1, 3));
 	sgn_addchild(clouds, &bb->base);
 
 	/* cloud1 */
 	sgn_bb_init(bb = malloc(sizeof(*bb)), "bb",
 			cache_get("/geom/plane"),
 			cache_get("/mat/white"),
-			cache_get("/tex/cloud"));
+			cache_get("/tex/flare"));
 	sgn_translate(&bb->base, tzv4_mkp(.5, 0.1, 0));
-	sgn_geom_scale(bb, tzv4_mkp(1, 1, 3));
+	sgn_geom_scale((struct sgn_geom*)bb, tzv4_mkp(1, 1, 3));
 	sgn_addchild(clouds, &bb->base);
 
 	/* notes to iterate lookat */
+	tzarray_p_pushv(&_nodes, &l->base);
 	tzarray_p_pushv(&_nodes, &bb->base);
 	tzarray_p_pushv(&_nodes, &ball->base);
-	tzarray_p_pushv(&_nodes, &l->base);
 	tzarray_p_pushv(&_nodes, &floor->base);
 
 	sgn_cam_attach( (struct sgn_cam *)cam,

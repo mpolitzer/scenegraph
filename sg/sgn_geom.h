@@ -15,11 +15,11 @@ struct sgn_geom {
 	tzm4 localT, localI;
 };
 
-#define sgn_geom_localT(_self) ((_self)->localT)
-#define sgn_geom_material(_self) ((_self)->material)
-#define sgn_geom_geom(_self)   ((_self)->geom)
-#define sgn_geom_mat(_self)   ((_self)->mat)
-#define sgn_geom_tex(_self)   ((_self)->tex)
+#define sgn_geom_localT(_self) (&(_self)->localT)
+#define sgn_geom_material(_self) (&(_self)->material)
+#define sgn_geom_geom(_self)   (&(_self)->geom)
+#define sgn_geom_mat(_self)   (&(_self)->mat)
+#define sgn_geom_tex(_self)   (&(_self)->tex)
 
 bool
 sgn_isgeom(

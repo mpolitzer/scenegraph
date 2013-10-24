@@ -30,12 +30,12 @@ void sgn_cam_setup(T *self, struct scene *scene) {
 	tzm4_mkiden(&I);
 #if 1
 	for (tmp = &self->base; tmp; tmp = tmp->parent) {
-		tzm4_mulm(&V, &V, &sgn_base_I(tmp));
-		tzm4_mulm(&I, &I, &sgn_base_T(tmp));
+		tzm4_mulm(&V, &V, sgn_base_I(tmp));
+		tzm4_mulm(&I, &I, sgn_base_T(tmp));
 	}
 #endif
-	sgn_base_to(&self->base)   = V;
-	sgn_base_from(&self->base) = I;
+	*sgn_base_to(&self->base)   = V;
+	*sgn_base_from(&self->base) = I;
 }
 
 void sgn_cam_attach(T *self, struct sgn_base *parent) {

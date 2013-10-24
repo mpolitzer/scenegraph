@@ -3,6 +3,7 @@
 
 #include <tzmath/tzmath.h>
 
+/* http://www.kynd.info/log/?p=201 */
 struct material {
 	tzv4 ambient;
 	tzv4 diffuse;

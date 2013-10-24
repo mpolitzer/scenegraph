@@ -4,10 +4,16 @@
 struct texture {
 	unsigned int type;
 	unsigned int id;
+	unsigned int islum;
 };
 
 struct texture *
 texture_init(   struct texture *self,
+		unsigned int type,
+		const char *texture);
+struct texture *
+texture_lum_init(
+		struct texture *self,
 		unsigned int type,
 		const char *texture);
 void

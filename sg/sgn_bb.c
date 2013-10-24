@@ -2,26 +2,30 @@
 #include <sg/sgn_bb.h>
 #include <sg/sgn_cam.h>
 
-typedef struct sgn_geom T;
+#include <sg/geometry.h>
+#include <sg/texture.h>
+#include <sg/material.h>
+
+typedef struct sgn_bb T;
 
 static void sgn_bb_draw(struct sgn_base *_self, struct scene *scene) {
-	tzm4 *cam  = &sgn_base_to(scene->active_cam);
+	tzm4 *cam  = sgn_base_to(scene->active_cam);
 	tzm4 tmp;
 	T *self = (T *)_self;
 
 	tzv4 up    = tzv4_normalize(tzm4_mulv(cam, tzv4_mkv(0, 1, 0))),
 	     vdir  = tzv4_normalize(tzm4_mulv(cam, tzv4_mkv(1, 0, 0))),
 	     right = tzv4_cross(up, right);
-	tzm4_mulm(&tmp, cam, &sgn_base_to(_self));
+	tzm4_mulm(&tmp, cam, sgn_base_to(_self));
 	/* look at the camera */
-	tzm4_mkcols(&sgn_base_to(_self),
+	tzm4_mkcols(sgn_base_to(_self),
 			up, right, vdir,
 			tmp.c._3);
 
 	/* apply the localT transformation. */
 	tzm4_mulm(&tmp,
-		&sgn_base_to(_self),
-		&sgn_geom_localT(self));
+		sgn_base_to(_self),
+		sgn_bb_localT(self));
 	/* TODO: fix bull crap */
 	if (self->mat) material_load  (self->mat);
 	if (self->tex) texture_load   (self->tex);
@@ -43,7 +47,7 @@ static struct sgn_vtbl sgn_bb_vtbl = {
 };
 
 void sgn_bb_init(
-		struct sgn_geom *self,
+		struct sgn_bb *self,
 		const char *name,
 		struct geometry *geom,
 		struct material *mat,
