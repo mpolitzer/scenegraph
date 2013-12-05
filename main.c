@@ -6,6 +6,7 @@
 
 #include <sg/cache.h>
 #include <sg/geometry.h>
+#include <sg/msh.h>
 #include <sg/material.h>
 #include <sg/texture.h>
 
@@ -20,29 +21,57 @@
 #include <sg/ds/tzarray_p.inl>
 
 #include <SOIL.h>
+#define DATA_DIR "data/"
 
 static struct scene S;
-static struct cam_ctl _ctl = { .r = 1, .phi = 1, .theta = M_PI/2 };
+static struct cam_ctl _ctl = { .r = 10, .phi = 1, .theta = M_PI/2 };
 static GLFWwindow *_window;
 struct tzarray_p_t _nodes;
-struct sgn_base *_node;
-struct sgn_base *_lbase, *_ldome, *_ball;
+struct sgn_geom   *_jeep, *_sphere;
+struct sgn_light  *_light;
+static bool _draw_volumes = false;
 
 static void gfx_init(void);
 static void gfx_fini(void);
 static void reshape(GLFWwindow *win, int w, int h);
-static void sg_core_axes(void);
 void sg_core_plane(void);
+
+struct jeep {
+	float v;
+	float theta, /* wheel angle */
+	      omega; /* wheel speed */
+};
+
+struct jeep jeep = {
+	.v     = 10,
+	.theta = 0.10,
+	.omega = 0.01,
+};
 
 void mouse_callback(GLFWwindow *window, double x, double y);
 
 static void cache_populate(void) {
 	cache_init();
 #define NEW_G malloc(sizeof(struct geometry))
-	cache_put("/geom/sphere",   geometry_mksphere  (NEW_G, 64, 64));
-	cache_put("/geom/plane",    geometry_mkplane   (NEW_G, 128));
-	cache_put("/geom/cylinder", geometry_mkcylinder(NEW_G, 64, 64));
-	cache_put("/geom/cone",     geometry_mkcone    (NEW_G, 64, 64));
+	/* carrega jeep */
+	cache_put("/geom/bunny", geometry_loadmsh(NEW_G, "data/bunny.msh"));
+	cache_put("/geom/alavancas", geometry_loadmsh(NEW_G, "data/Alavancas.msh"));
+	cache_put("/geom/banco", geometry_loadmsh(NEW_G, "data/Banco.msh"));
+	cache_put("/geom/calota", geometry_loadmsh(NEW_G, "data/Calota.msh"));
+	cache_put("/geom/farol", geometry_loadmsh(NEW_G, "data/Farol.msh"));
+	cache_put("/geom/lanternas", geometry_loadmsh(NEW_G, "data/Lanternas.msh"));
+	cache_put("/geom/limpador", geometry_loadmsh(NEW_G, "data/Limpador.msh"));
+	cache_put("/geom/painel", geometry_loadmsh(NEW_G, "data/Painel.msh"));
+	cache_put("/geom/parabrisa", geometry_loadmsh(NEW_G, "data/Parabrisa.msh"));
+	cache_put("/geom/roda", geometry_loadmsh(NEW_G, "data/Roda.msh"));
+	cache_put("/geom/volante", geometry_loadmsh(NEW_G, "data/Volante.msh"));
+	cache_put("/geom/carroceria", geometry_loadmsh(NEW_G, "data/carroceria.msh"));
+
+
+	cache_put("/geom/sphere",   geometry_mksphere  (NEW_G, 32, 32));
+	cache_put("/geom/plane",    geometry_mkplane   (NEW_G, 64));
+	cache_put("/geom/cylinder", geometry_mkcylinder(NEW_G, 32, 32));
+	cache_put("/geom/cone",     geometry_mkcone    (NEW_G, 32, 32));
 #undef NEW_G
 #define NEW_M malloc(sizeof(struct material))
 	cache_put("/mat/default", material_default(NEW_M));
@@ -70,23 +99,97 @@ static void cache_populate(void) {
 				tzv4_mkp(0.63300, 0.727811, 0.63300),
 				tzv4_mkp(0.00,   0.00,   0.00),
 				76.8));
+	/* jeep materials */
+	cache_put("/mat/lanternas", material_init(NEW_M,
+			tzv4_mkp(1.000000,0.000000,0.000000),
+			tzv4_mkp(1.000000,0.000000,0.000000),
+			tzv4_mkp(1.000000,1.000000,1.000000),
+			tzv4_mkp(0.00,   0.00,   0.00),
+			0.300000));
+
+	cache_put("/mat/alavanvas", material_init(NEW_M,
+			tzv4_mkp(0.133300,0.133300,0.133300),
+			tzv4_mkp(0.133300,0.133300,0.133300),
+			tzv4_mkp(1.000000,1.000000,1.000000),
+			tzv4_mkp(0.00,   0.00,   0.00),
+			0.220000));
+
+	cache_put("/mat/roda", material_init(NEW_M,
+			tzv4_mkp(0.133300,0.133300,0.133300),
+			tzv4_mkp(0.133300,0.133300,0.133300),
+			tzv4_mkp(1.000000,1.000000,1.000000),
+			tzv4_mkp(0.00,   0.00,   0.00),
+			0.220000));
+
+	cache_put("/mat/limpador", material_init(NEW_M,
+			tzv4_mkp(0.133300,0.133300,0.133300),
+			tzv4_mkp(0.133300,0.133300,0.133300),
+			tzv4_mkp(1.000000,1.000000,1.000000),
+			tzv4_mkp(0.00,   0.00,   0.00),
+			0.220000));
+
+	cache_put("/mat/volante", material_init(NEW_M,
+			tzv4_mkp(0.133300,0.133300,0.133300),
+			tzv4_mkp(0.133300,0.133300,0.133300),
+			tzv4_mkp(1.000000,1.000000,1.000000),
+			tzv4_mkp(0.00,   0.00,   0.00),
+			0.220000));
+
+	cache_put("/mat/farol", material_init(NEW_M,
+			tzv4_mkp(0.098000,0.098000,0.098000),
+			tzv4_mkp(0.098000,0.098000,0.098000),
+			tzv4_mkp(0.900000,0.900000,0.900000),
+			tzv4_mkp(0.00,   0.00,   0.00),
+			0.820000));
+	/* Opacity=0.3 */
+
+	cache_put("/mat/painel", material_init(NEW_M,
+			tzv4_mkp(0.262700,0.262700,0.262700),
+			tzv4_mkp(0.262700,0.262700,0.262700),
+			tzv4_mkp(1.000000,1.000000,1.000000),
+			tzv4_mkp(0.00,   0.00,   0.00),
+			0.180000));
+
+	cache_put("/mat/banco", material_init(NEW_M,
+			tzv4_mkp(0.376500,0.388200,0.345100),
+			tzv4_mkp(0.376500,0.388200,0.345100),
+			tzv4_mkp(0.900000,0.900000,0.900000),
+			tzv4_mkp(0.00,   0.00,   0.00),
+			0.100000));
+
+	cache_put("/mat/carroceria", material_init(NEW_M,
+			tzv4_mkp(0.521600,0.505900,0.325500),
+			tzv4_mkp(0.521600,0.505900,0.325500),
+			tzv4_mkp(0.900000,0.900000,0.900000),
+			tzv4_mkp(0.00,   0.00,   0.00),
+			0.310000));
+
+	cache_put("/mat/calota", material_init(NEW_M,
+			tzv4_mkp(0.619600,0.619600,0.619600),
+			tzv4_mkp(0.619600,0.619600,0.619600),
+			tzv4_mkp(0.900000,0.900000,0.900000),
+			tzv4_mkp(0.00,   0.00,   0.00),
+			0.310000));
 #undef NEW_M
 #define NEW_T malloc(sizeof(struct texture))
 	cache_put("/tex/grass", texture_init(NEW_T,
 				GL_TEXTURE_2D,
-				"ground_grass_1024_tile.jpg"));
+				DATA_DIR "ground_grass_1024_tile.jpg"));
 	cache_put("/tex/earth", texture_init(NEW_T,
 				GL_TEXTURE_2D,
-				"earth.png"));
+				DATA_DIR "earth.png"));
 	cache_put("/tex/city", texture_init(NEW_T,
 				GL_TEXTURE_2D,
-				"city1_1.png"));
+				DATA_DIR "city1_1.png"));
+	cache_put("/tex/bathroom", texture_init(NEW_T,
+				GL_TEXTURE_2D,
+				DATA_DIR "bathroom.jpg"));
 	cache_put("/tex/cloud", texture_lum_init(NEW_T,
 				GL_TEXTURE_2D,
-				"cloud.png"));
+				DATA_DIR "cloud.png"));
 	cache_put("/tex/flare", texture_lum_init(NEW_T,
 				GL_TEXTURE_2D,
-				"flare.png"));
+				DATA_DIR "flare.png"));
 #undef NEW_T
 }
 
@@ -98,8 +201,18 @@ static void key_callback(GLFWwindow* window,
 
 	bool action_mask = (action == GLFW_PRESS || action == GLFW_REPEAT);
 
+	if (key == GLFW_KEY_V && action_mask) {
+		_draw_volumes = !_draw_volumes;
+		printf("draw volumes %d\n", _draw_volumes);
+	}
 	if (key == GLFW_KEY_ESCAPE && action_mask)
 		glfwSetWindowShouldClose(window, GL_TRUE);
+	if (key == GLFW_KEY_H && action_mask)     sgn_translate(&_sphere->base, tzv4_mkp(   0,   0, 0.1));
+	if (key == GLFW_KEY_L && action_mask)     sgn_translate(&_sphere->base, tzv4_mkp(   0,   0,-0.1));
+	if (key == GLFW_KEY_UP && action_mask)    sgn_translate(&_sphere->base, tzv4_mkp( 0.1,   0,   0));
+	if (key == GLFW_KEY_DOWN && action_mask)  sgn_translate(&_sphere->base, tzv4_mkp(-0.1,   0,   0));
+	if (key == GLFW_KEY_LEFT && action_mask)  sgn_translate(&_sphere->base, tzv4_mkp(   0, 0.1,   0));
+	if (key == GLFW_KEY_RIGHT && action_mask) sgn_translate(&_sphere->base, tzv4_mkp(   0, -0.1,  0));
 	if (key == GLFW_KEY_MINUS && action_mask) {
 		_ctl.r += 0.1;
 		if (_ctl.r <= 0) _ctl.r = 0.1;
@@ -128,17 +241,30 @@ static void key_callback(GLFWwindow* window,
 		if (fog) scene_env_fog_enable(&S.env);
 		else     scene_env_fog_disable(&S.env);
 	}
-	if (key == GLFW_KEY_UP && action_mask) {
-		sgn_rotate(_ldome, 0.1, tzv4_mkp(1, 0, 0));
+	if (key == GLFW_KEY_H && action_mask) {
+		S.env.end += 1;
+		if (fog) scene_env_fog_enable(&S.env);
+		printf("end: %f\n", S.env.end);
 	}
-	if (key == GLFW_KEY_DOWN && action_mask) {
-		sgn_rotate(_ldome, 0.1, tzv4_mkp(-1, 0, 0));
+	else if (key == GLFW_KEY_U && action_mask) {
+		S.env.end -= 1;
+		if (fog) scene_env_fog_enable(&S.env);
+		printf("end: %f\n", S.env.end);
 	}
-	if (key == GLFW_KEY_RIGHT && action_mask) {
-		sgn_rotate(_lbase, 0.1, tzv4_mkp(0, 1, 0));
+	if (key == GLFW_KEY_W && action_mask) { jeep.omega += 0.001; }
+	if (key == GLFW_KEY_S && action_mask) { jeep.omega -= 0.001; }
+	if (key == GLFW_KEY_A && action_mask) { jeep.theta -= 0.01; }
+	if (key == GLFW_KEY_D && action_mask) { jeep.theta += 0.01; }
+	printf("jeep theta: %f\n", jeep.theta);
+	if (key == GLFW_KEY_G && action_mask) {
+		S.env.start += 1;
+		if (fog) scene_env_fog_enable(&S.env);
+		printf("start: %f\n", S.env.start);
 	}
-	if (key == GLFW_KEY_LEFT && action_mask) {
-		sgn_rotate(_lbase, 0.1, tzv4_mkp(0, -1, 0));
+	else if (key == GLFW_KEY_Y && action_mask) {
+		S.env.start -= 1;
+		if (fog) scene_env_fog_enable(&S.env);
+		printf("start: %f\n", S.env.start);
 	}
 	if (key == GLFW_KEY_R && action_mask) {
 		tzm4_mkrows(sgn_base_I(S.active_cam),
@@ -180,141 +306,133 @@ void button_callback(GLFWwindow *window, int button, int action, int mods) {
 	printf("%d %d %d\n", button, action, mods);
 }
 
-struct sgn_geom *mktable(void) {
-	struct sgn_geom *ttop, *leg;
-	/* table top */
-	sgn_geom_init(ttop = malloc(sizeof(*ttop)), "floor",
-			cache_get("/geom/plane"),
-			cache_get("/mat/copper"),
-			NULL);
-	sgn_translate(&ttop->base, tzv4_mkp(0, 1, 0));
-	/* leg0 */
-	sgn_geom_init(leg = malloc(sizeof(*leg)), "leg0",
-			cache_get("/geom/cylinder"),
-			cache_get("/mat/copper"),
-			NULL);
-	sgn_geom_scale(leg,  tzv4_mkp(0.1, 1, 0.1));
-	sgn_translate(&leg->base, tzv4_mkp(0.45, -0.5, 0.45));
-	sgn_addchild(&ttop->base, &leg->base);
-
-	/* leg1 */
-	sgn_geom_init(leg = malloc(sizeof(*leg)), "leg1",
-			cache_get("/geom/cylinder"),
-			cache_get("/mat/copper"),
-			NULL);
-	sgn_geom_scale(leg,  tzv4_mkp(0.1, 1, 0.1));
-	sgn_translate(&leg->base, tzv4_mkp(-0.45, -0.5, 0.45));
-	sgn_addchild(&ttop->base, &leg->base);
-
-	/* leg2 */
-	sgn_geom_init(leg = malloc(sizeof(*leg)), "leg2",
-			cache_get("/geom/cylinder"),
-			cache_get("/mat/copper"),
-			NULL);
-	sgn_geom_scale((leg),  tzv4_mkp(0.1, 1, 0.1));
-	sgn_translate(&leg->base, tzv4_mkp(-0.45, -0.5, -0.45));
-	sgn_addchild(&ttop->base, &leg->base);
-
-	/* leg3 */
-	sgn_geom_init(leg = malloc(sizeof(*leg)), "leg3",
-			cache_get("/geom/cylinder"),
-			cache_get("/mat/copper"),
-			NULL);
-	sgn_geom_scale((leg),  tzv4_mkp(0.1, 1, 0.1));
-	sgn_translate(&leg->base, tzv4_mkp( 0.45, -0.5, -0.45));
-	sgn_addchild(&ttop->base, &leg->base);
-
-	return ttop;
+static void update_body(struct sgn_geom *self) {
+	sgn_rotate((struct sgn_base *)self, jeep.v*jeep.omega*jeep.theta,
+			tzv4_mkp(0, 0, 1));
+	sgn_translate((struct sgn_base *)self, tzv4_mkp(jeep.v*jeep.omega, 0, 0));
 }
 
-struct sgn_geom *mkabajour(void) {
-	struct sgn_geom *lbase, *lbasej, *lh0, *lj0, *lh1, *lj1, *ldome;
-	struct sgn_light *lamp;
-	/* abajour */
-	sgn_geom_init(lbase = malloc(sizeof(*lbase)), "base",
-			cache_get("/geom/cylinder"),
-			cache_get("/mat/bplastic"),
-			NULL);
-	sgn_geom_scale(lbase, tzv4_mkp(0.1, 0.1, 0.1));
-	sgn_translate(&lbase->base, tzv4_mkp(0, 0.05, 0));
+static void update_wheels(struct sgn_geom *self) {
+	/* rotate around (0,0,0), this will most likely accumulate error over time... */
+	sgn_translate((struct sgn_base *)self, tzv4_mkp(2.5, -0.644, 0.438));
+	sgn_rotate((struct sgn_base *)self, -jeep.v*jeep.omega, tzv4_mkp(0, 1, 0));
+	sgn_translate((struct sgn_base *)self, tzv4_minus(tzv4_mkp(2.5, -0.644, 0.438)));
+}
 
-	sgn_geom_init(lbasej = malloc(sizeof(*lbasej)), "basej",
-			cache_get("/geom/sphere"),
-			cache_get("/mat/bplastic"),
-			NULL);
-	sgn_geom_scale(lbasej, tzv4_mkp(0.1, 0.1, 0.1));
-	sgn_translate(&lbasej->base, tzv4_mkp(0.0, 0.05, 0));
-	sgn_addchild(&lbase->base, &lbasej->base);
+static void update_fwheels(struct sgn_geom *self) {
+	/* rotate around (0,0,0), this will most likely accumulate error over time... */
+	sgn_translate((struct sgn_base *)self, tzv4_mkp(2.5, -0.644, 0.438));
+	sgn_rotate((struct sgn_base *)self, -jeep.v*jeep.omega, tzv4_mkp(0, 1, 0));
+	sgn_translate((struct sgn_base *)self, tzv4_minus(tzv4_mkp(2.5, -0.644, 0.438)));
+}
 
-	sgn_geom_init(lh0 = malloc(sizeof(*lh0)), "lh0",
-			cache_get("/geom/cylinder"),
-			cache_get("/mat/bplastic"),
-			NULL);
-	sgn_geom_scale(lh0, tzv4_mkp(0.06, 0.1, 0.06));
-	sgn_geom_translate(lh0, tzv4_mkp(0.0, 0.5, 0));
-	sgn_rotate(&lh0->base, M_PI/6, tzv4_mkp(1, 0, 0));
-	sgn_addchild(&lbasej->base, &lh0->base);
+struct sgn_geom *mkjeep(void) {
+	struct sgn_geom *root, *t, *t1;
+	struct sgn_light *l0, *l1;
 
-	sgn_geom_init(lj0 = malloc(sizeof(*lbasej)), "lj0",
-			cache_get("/geom/sphere"),
-			cache_get("/mat/bplastic"),
-			NULL);
-	sgn_geom_scale(lj0, tzv4_mkp(0.1, 0.1, 0.1));
-	sgn_translate(&lj0->base, tzv4_mkp(0.0, 0.1, 0));
-	sgn_addchild(&lh0->base, &lj0->base);
+	sgn_geom_init(root = malloc(sizeof(*root)), "carroceria",
+			cache_get("/geom/carroceria"),
+			cache_get("/mat/carroceria"), NULL);
+	sgn_rotate((struct sgn_base *)root, M_PI/2, tzv4_mkp(1, 0, 0));
+	sgn_translate((struct sgn_base *)root, tzv4_mkp(0, 8, 0));
+	root->update = update_body;
+	sgn_geom_init(t = malloc(sizeof(*root)), "bunny",
+			cache_get("/geom/bunny"),
+			cache_get("/mat/emerald"), NULL);
+	sgn_geom_scale(t, tzv4_mkp(10, 10, 10));
+	sgn_translate((struct sgn_base *)t, tzv4_mkp(0, 0, 1));
+	sgn_addchild((struct sgn_base *)root, (struct sgn_base *)t);
 
+	/* farois */
+	sgn_geom_init(t = malloc(sizeof(*t)), "farol0",
+			cache_get("/geom/farol"),
+			cache_get("/mat/farol"), NULL);
+	sgn_addchild((struct sgn_base *)root, (struct sgn_base *)t);
+	sgn_geom_init(t1 = malloc(sizeof(*t1)), "farol1",
+			cache_get("/geom/farol"),
+			cache_get("/mat/farol"), NULL);
+	sgn_translate((struct sgn_base *)t1, tzv4_mkp(0, 1.028, 0));
+	sgn_addchild((struct sgn_base *)t, (struct sgn_base *)t1);
 
-	sgn_geom_init(lh1 = malloc(sizeof(*lh1)), "lh1",
-			cache_get("/geom/cylinder"),
-			cache_get("/mat/bplastic"),
-			NULL);
-	sgn_geom_scale(lh1, tzv4_mkp(0.06, 0.1, 0.06));
-	sgn_geom_translate(lh1, tzv4_mkp(0.0, 0.5, 0));
-	sgn_rotate(&lh1->base, M_PI/6, tzv4_mkp(1, 0, 0));
-	sgn_addchild(&lj0->base, &lh1->base);
+	sgn_light_init(l0 = malloc(sizeof(*l0)), "l0");
+	l0->light.spot_cutoff = 50;
+	l0->light.spot_exponent = 5;
+	sgn_translate((struct sgn_base *)l0, tzv4_mkp(2.956, 0.514, 1.074));
+	sgn_rotate((struct sgn_base *)l0, M_PI/2, tzv4_mkp(0, 0, 1));
+	sgn_addchild((struct sgn_base *)t, (struct sgn_base *)l0);
 
-	sgn_geom_init(lj1 = malloc(sizeof(*lj1)), "lj1",
-			cache_get("/geom/sphere"),
-			cache_get("/mat/bplastic"),
-			NULL);
-	sgn_geom_scale(lj1, tzv4_mkp(0.1, 0.1, 0.1));
-	sgn_translate(&lj1->base, tzv4_mkp(0.0, 0.1, 0));
-	sgn_rotate(&lj1->base, M_PI/3, tzv4_mkp(1, 0, 0));
-	sgn_addchild(&lh1->base, &lj1->base);
+	sgn_light_init(l1 = malloc(sizeof(*l1)), "l1");
+	l1->light.spot_cutoff = 50;
+	l1->light.spot_exponent = 5;
+	sgn_translate((struct sgn_base *)l1, tzv4_mkp(1.028, 0, 0));
+	sgn_addchild((struct sgn_base *)l0, (struct sgn_base *)l1);
 
-	sgn_geom_init(ldome = malloc(sizeof(*ldome)), "ldome",
-			cache_get("/geom/cone"),
-			cache_get("/mat/bplastic"),
-			NULL);
-	sgn_geom_scale(ldome, tzv4_mkp(0.1, 0.1, 0.1));
-	sgn_translate(&ldome->base, tzv4_mkp(0.0, 0.05, 0));
-	sgn_rotate(&ldome->base, M_PI/30, tzv4_mkp(1, 0, 0));
-	sgn_addchild(&lj1->base, &ldome->base);
+	/* roda0 */
+	sgn_geom_init(t = malloc(sizeof(*t)), "roda_f0",
+			cache_get("/geom/roda"),
+			cache_get("/mat/roda"), NULL);
+	sgn_addchild((struct sgn_base *)root, (struct sgn_base *)t);
+	sgn_geom_init(t1 = malloc(sizeof(*t1)), "calota_f0",
+			cache_get("/geom/calota"),
+			cache_get("/mat/calota"), NULL);
+	sgn_addchild((struct sgn_base *)t, (struct sgn_base *)t1);
+	t->update = update_wheels;
 
-	tzarray_p_pushv(&_nodes, &ldome->base);
-	_lbase = &lbase->base;
-	_ldome = &lj1->base;
+	/* roda1 */
+	sgn_geom_init(t = malloc(sizeof(*t)), "roda_f1",
+			cache_get("/geom/roda"),
+			cache_get("/mat/roda"), NULL);
+	sgn_translate((struct sgn_base *)t, tzv4_mkp(0, 1.288 + 0.197, 0));
+	sgn_addchild((struct sgn_base *)root, (struct sgn_base *)t);
+	sgn_geom_init(t1 = malloc(sizeof(*t1)), "calota_f0",
+			cache_get("/geom/calota"),
+			cache_get("/mat/calota"), NULL);
+	sgn_translate((struct sgn_base *)t1, tzv4_mkp(0, 0.2, 0));
+	sgn_addchild((struct sgn_base *)t, (struct sgn_base *)t1);
+	t->update = update_fwheels;
+	/* roda2 */
+	sgn_geom_init(t = malloc(sizeof(*t)), "roda_r0",
+			cache_get("/geom/roda"),
+			cache_get("/mat/roda"), NULL);
+	sgn_translate((struct sgn_base *)t, tzv4_mkp(-2.5, 0, 0));
+	sgn_addchild((struct sgn_base *)root, (struct sgn_base *)t);
+	sgn_geom_init(t1 = malloc(sizeof(*t1)), "calota_f0",
+			cache_get("/geom/calota"),
+			cache_get("/mat/calota"), NULL);
+	sgn_addchild((struct sgn_base *)t, (struct sgn_base *)t1);
+	t->update = update_wheels;
+	/* roda3 */
+	sgn_geom_init(t = malloc(sizeof(*t)), "roda_r1",
+			cache_get("/geom/roda"),
+			cache_get("/mat/roda"), NULL);
+	sgn_translate((struct sgn_base *)t, tzv4_mkp(-2.5, 1.288 + 0.197, 0));
+	sgn_addchild((struct sgn_base *)root, (struct sgn_base *)t);
+	sgn_geom_init(t1 = malloc(sizeof(*t1)), "calota_f0",
+			cache_get("/geom/calota"),
+			cache_get("/mat/calota"), NULL);
+	sgn_translate((struct sgn_base *)t1, tzv4_mkp(0, 0.2, 0));
+	sgn_addchild((struct sgn_base *)t, (struct sgn_base *)t1);
+	t->update = update_wheels;
 
-	sgn_light_init(lamp = malloc(sizeof(*lamp)), "llamp");
-	lamp->light.diffuse = tzv4_mkp(0.8, 0.8, 0.8);
-	lamp->light.spot_cutoff = 30;
-	lamp->light.spot_exponent = 20;
-	sgn_addchild(&ldome->base, &lamp->base);
+	/* volante */
+	sgn_geom_init(t = malloc(sizeof(*t)), "volante",
+			cache_get("/geom/volante"),
+			cache_get("/mat/volante"), NULL);
+	sgn_addchild((struct sgn_base *)root, (struct sgn_base *)t);
 
-	return lbase;
+	return root;
 }
 
 void mkscene(struct scene *S) {
 	struct sgn_base *root;
-	struct sgn_geom *ball, *ball1, *ttop, *floor, *wall0, *wall1, *abajour;
-	struct sgn_bb *bb;
+	struct sgn_geom *floor, *wall0, *wall1, *jeep;
 	struct sgn_light *l, *spot;
 	struct sgn_cam  *cam;
-	struct sgn_base *clouds;
+	struct sgn_bb   *bb;
 
 	cache_populate();
 	scene_init(S);
-	tzarray_p_init(&_nodes);
+	tzarray_p_init(&_nodes); /* objs for cam to look at. */
 	sgn_cam_init(cam = malloc(sizeof(*cam)), "cam");
 	scene_setcam(S, &cam->base);
 	root = scene_getroot(S);
@@ -322,10 +440,18 @@ void mkscene(struct scene *S) {
 	/* floor */
 	sgn_geom_init(floor = malloc(sizeof(*floor)), "floor",
 			cache_get("/geom/plane"),
-			cache_get("/mat/copper"),
-			NULL);
+			cache_get("/mat/white"),
+			cache_get("/tex/bathroom"));
 	sgn_geom_scale(floor,  tzv4_mkp(30, 1, 30));
 	sgn_addchild(root, &floor->base);
+
+	sgn_bb_init(bb = malloc(sizeof(*bb)), "flare",
+			cache_get("/geom/plane"),
+			cache_get("/mat/white"),
+			cache_get("/tex/flare"));
+	sgn_geom_scale(bb,  tzv4_mkp(3, 3, 3));
+	sgn_translate(&bb->base, tzv4_mkp(9, 9, 9));
+	sgn_addchild(&floor->base, &bb->base);
 
 	/* wall0 */
 	sgn_geom_init(wall0 = malloc(sizeof(*wall0)), "wall0",
@@ -347,156 +473,181 @@ void mkscene(struct scene *S) {
 	sgn_geom_scale(wall1,  tzv4_mkp(30, 1, 30));
 	sgn_addchild(&floor->base, &wall1->base);
 
-	/* table */
-	sgn_addchild(&floor->base, &(ttop = mktable())->base);
-
-	/* abajour */
-	sgn_addchild(&ttop->base, &(abajour = mkabajour())->base);
-	sgn_translate(&abajour->base, tzv4_mkp(0.35, 0, 0.35));
-
-	/* ball */
-	sgn_geom_init(ball = malloc(sizeof(*ball)), "ball",
-			cache_get("/geom/sphere"),
-			cache_get("/mat/white"),
-			cache_get("/tex/earth"));
-	sgn_geom_scale(ball, tzv4_mkp(0.1, 0.1, 0.1));
-	sgn_translate(&ball->base, tzv4_mkp(0, 0.05, 0));
-	sgn_addchild(&ttop->base, &ball->base);
-	_ball = &ball->base;
-
-	/* ball1 */
-	sgn_geom_init(ball1 = malloc(sizeof(*ball1)), "ball",
-			cache_get("/geom/sphere"),
-			cache_get("/mat/emerald"),
-			NULL);
-	sgn_geom_scale(ball1, tzv4_mkp(0.03, 0.03, 0.03));
-	sgn_translate(&ball1->base, tzv4_mkp(0.2, 0.0, 0));
-	sgn_addchild(&ball->base, &ball1->base);
-
 	/* light */
-	sgn_light_init(l = malloc(sizeof(*l)), "global");
-	sgn_translate(&l->base, tzv4_mkp(1.5, 0.5, 0));
-	sgn_addchild(&ttop->base, &l->base);
+	sgn_light_init(_light = l = malloc(sizeof(*l)), "global");
+	sgn_translate(&l->base, tzv4_mkp(1, 1, 1));
+	sgn_addchild(root, &l->base);
 
 	/* spot */
 	sgn_light_init(spot = malloc(sizeof(*spot)), "global");
-	spot->light.spot_cutoff = 30;
-	spot->light.spot_exponent = 30;
+	spot->light.spot_cutoff = 50;
+	spot->light.spot_exponent = 5;
 	sgn_translate(&spot->base, tzv4_mkv(-1, 5, 0));
 	sgn_rotate(&spot->base, M_PI, tzv4_mkp(1, 0, 0));
-	sgn_addchild(&ttop->base, &spot->base);
+	sgn_addchild(root, &spot->base);
 
-	/* group of clouds */
-	sgn_base_init(clouds = malloc(sizeof(*clouds)), NULL);
-	sgn_translate(clouds, tzv4_mkp( 4, 4, 0));
-	sgn_addchild(&ttop->base, clouds);
-
-	/* cloud0 */
-	sgn_bb_init(bb = malloc(sizeof(*bb)), "bb",
-			cache_get("/geom/plane"),
-			cache_get("/mat/white"),
-			cache_get("/tex/cloud"));
-	sgn_translate(&bb->base, tzv4_mkp(-.5, 0, 0));
-	sgn_geom_scale((struct sgn_geom*)bb, tzv4_mkp(1, 1, 3));
-	sgn_addchild(clouds, &bb->base);
-
-	/* cloud1 */
-	sgn_bb_init(bb = malloc(sizeof(*bb)), "bb",
-			cache_get("/geom/plane"),
-			cache_get("/mat/white"),
-			cache_get("/tex/flare"));
-	sgn_translate(&bb->base, tzv4_mkp(.5, 0.1, 0));
-	sgn_geom_scale((struct sgn_geom*)bb, tzv4_mkp(1, 1, 3));
-	sgn_addchild(clouds, &bb->base);
+	/* jeep */
+	sgn_addchild(root, (struct sgn_base *)(_jeep = jeep = mkjeep()));
 
 	/* notes to iterate lookat */
-	tzarray_p_pushv(&_nodes, &l->base);
-	tzarray_p_pushv(&_nodes, &bb->base);
-	tzarray_p_pushv(&_nodes, &ball->base);
-	tzarray_p_pushv(&_nodes, &floor->base);
+	tzarray_p_pushv(&_nodes, &jeep->base);
+	tzarray_p_pushv(&_nodes, root);
 
 	sgn_cam_attach( (struct sgn_cam *)cam,
 			(struct sgn_base *)tzarray_p_getp(&_nodes)[0]);
 }
 
-void one_up_hack(void) {
-#if 0
-	tzm4 tmp, P, V;
-	tzm4 *veI = &sgn_base_to(S.active_cam);
-	tzm4 *vp  = &sgn_base_to(_ldome);
+void sgn_sm_from(struct sgn_geom *to, struct sgn_geom *from) {
+	sgn_base_init(&to->base, NULL);
+	to->geom = malloc(sizeof(struct geometry));
+	to->geom->ibo = from->geom->ibo;
+	to->geom->n   = from->geom->n;
+	to->geom->type= from->geom->type;
 
-	struct geometry *geom = cache_get("/geom/plane");
-	struct texture *tex   = cache_get("/tex/city");
-	struct material *mat  = cache_get("/mat/white");
+	glGenBuffers(1, &to->geom->vbo);
+	glBindBuffer(GL_ARRAY_BUFFER, to->geom->vbo);
+	glBufferData(GL_ARRAY_BUFFER,
+			(to->geom->n) * sizeof(struct vertex_332),
+			NULL,
+			GL_STREAM_DRAW);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
 
-	tzm4_perspective(&P, 90., 800/(float)600, 0.1, 100);
+void sgn_sm_update(struct sgn_geom *to, struct sgn_geom *from, tzv4 _lpos) {
+	/* put light in local coordinates */
+	tzv4 lpos = tzm4_mulv(&from->base.from, _lpos);
+	struct vertex_332 *t_verts, *f_verts;
+	int i;
 
-	tzm4_mkiden(&tmp);
-	glMatrixMode(GL_TEXTURE);
-	tzm4_lookat(&V, tzv4_mkp(1, 1, 1),
-			tzv4_mkp(0, 0, 0),
-			tzv4_mkp(0, 1, 0));
-	tzm4_mulm(&tmp, &tmp, veI);
-	tzm4_mulm(&tmp, &V, &tmp);
-	tzm4_mulm(&tmp, &P, &tmp);
-	glLoadMatrixf(tmp.f);
+	glBindBuffer(GL_ARRAY_BUFFER, to->geom->vbo);
+	t_verts = glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
+	glBindBuffer(GL_ARRAY_BUFFER, from->geom->vbo);
+	f_verts = glMapBuffer(GL_ARRAY_BUFFER, GL_READ_ONLY);
 
-	glMatrixMode(GL_MODELVIEW);
-	texture_load(tex);
+	for (i=0; i<from->geom->n; i++) {
+		tzv4 f_pos    = tzv4_mkv3(f_verts[i].pos);
+		tzv4 f_normal = tzv4_mkv3(f_verts[i].normal);
+		tzv4 l_dir    = tzv4_sub(f_pos, lpos);
 
-	glEnable(GL_TEXTURE_GEN_S);
-	glEnable(GL_TEXTURE_GEN_T);
-	glEnable(GL_TEXTURE_GEN_R);
-	glEnable(GL_TEXTURE_GEN_Q);
-	glTexGeni(GL_S, GL_TEXTURE_GEN_MODE, GL_EYE_LINEAR);
-	glTexGeni(GL_T, GL_TEXTURE_GEN_MODE, GL_EYE_LINEAR);
-	glTexGeni(GL_R, GL_TEXTURE_GEN_MODE, GL_EYE_LINEAR);
-	glTexGeni(GL_Q, GL_TEXTURE_GEN_MODE, GL_EYE_LINEAR);
+		if (tzv4_dot(l_dir, f_normal) <= 0) { /* front-face */
+			t_verts[i].pos = f_verts[i].pos;
+		} else {
+			t_verts[i].pos = tzv4_to3(tzv4_add(f_pos, tzv4_muls(l_dir, 50)));
+		}
+	}
 
-#endif
+	/* bind(from) */
+	glUnmapBuffer(GL_ARRAY_BUFFER);
+
+	glBindBuffer(GL_ARRAY_BUFFER, to->geom->vbo);
+	glUnmapBuffer(GL_ARRAY_BUFFER);
+
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 int main(int argc, char *argv[]) {
-
+	struct sgn_geom sphere, sphere_vol;
 	gfx_init();
 
 	/* make it look prety */
-	glEnable(GL_ALPHA_TEST);
-	glEnable(GL_BLEND);
-	glEnable(GL_NORMALIZE);
-	glEnable(GL_TEXTURE_2D);
-	glShadeModel(GL_SMOOTH);
-	glEnable(GL_POLYGON_SMOOTH); 
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glEnable(GL_ALPHA_TEST);
+	glEnable(GL_CULL_FACE);
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_NORMALIZE);
+	glEnable(GL_POLYGON_SMOOTH); 
+	glEnable(GL_STENCIL_TEST);
+	glEnable(GL_TEXTURE_2D);
 	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+	glShadeModel(GL_SMOOTH);
 
 	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 #if 0
 	glEnable(GL_COLOR_MATERIAL);
 #endif
-	glEnable(GL_LIGHTING);
-	glEnable(GL_DEPTH_TEST);
-#if 0
-	glEnable(GL_CULL_FACE);
-	glCullFace(GL_BACK);
-#else
-	glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, 1);
-#endif
+
 	glfwSetKeyCallback(_window, key_callback);
 	glfwSetCursorPosCallback(_window, mouse_callback);
 	glfwSetMouseButtonCallback(_window, button_callback);
 	glfwSetScrollCallback(_window, scroll_callback);
 
 	mkscene(&S);
+	sgn_geom_init(&sphere, "sphere",
+			cache_get("/geom/sphere"),
+			NULL, NULL);
+	sgn_sm_from(&sphere_vol, &sphere);
+	_sphere = &sphere;
+
+	sgn_translate(&sphere.base, tzv4_mkp(5, 1, 0));
+	sgn_rotate(&sphere.base, M_PI/2, tzv4_mkp(1, 0, 0));
+	sgn_addchild(&S.root, &sphere.base);
+	sgn_addchild(&sphere.base, &sphere_vol.base);
 	key_callback(_window, 0, 0, 0, 0);
 	while (!glfwWindowShouldClose(_window)) {
-		one_up_hack();
-		sgn_rotate(_ball, 0.01, tzv4_mkp(0, 1, 0));
+		tzm4 tmp;
+		tzm4 *cam = sgn_base_to(S.active_cam);
+		scene_update(&S, 1000/60);
+
+		/* grab light pos in global coords */
+		sgn_sm_update(&sphere_vol, &sphere, _light->base.to.c._3);
+		tzm4_mulm(&tmp, cam, &sphere_vol.base.to);
+
+		/* render objects that will be in shadow. */
+		glPushAttrib(     GL_COLOR_BUFFER_BIT
+				| GL_DEPTH_BUFFER_BIT
+				| GL_ENABLE_BIT
+				| GL_POLYGON_BIT
+				| GL_STENCIL_BUFFER_BIT);
+
+		/* casted on who? */
+		glDepthMask(GL_TRUE);
+		scene_draw(&S); /* everyone */
+		glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+		glDepthMask(GL_FALSE);
+		glEnable(GL_CULL_FACE);
+		glEnable(GL_STENCIL_TEST);
+		glEnable(GL_POLYGON_OFFSET_FILL);
+		glPolygonOffset(1.0f, 1.0f);
+
+		/* setup for stencil ops. */
+		glDepthMask(GL_FALSE);
+		glEnable(GL_CULL_FACE);
+		glEnable(GL_STENCIL_TEST);
+
+		/* front */
+		glCullFace(GL_FRONT);
+		glStencilFunc(GL_ALWAYS, 0, 0xFFFFFFFFL);
+		glStencilOp(GL_KEEP, GL_INCR, GL_KEEP);
+		geometry_draw(sphere_vol.geom, &tmp);
+		/* back */
+		glCullFace(GL_BACK);
+		glStencilFunc(GL_ALWAYS, 0, 0xFFFFFFFFL);
+		glStencilOp(GL_KEEP, GL_DECR, GL_KEEP);
+		geometry_draw(sphere_vol.geom, &tmp);
+
+		/* restore to draw with shadows */
+		glDisable(GL_POLYGON_OFFSET_FILL);
+		glDisable(GL_CULL_FACE);
+		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+		glDepthMask(GL_TRUE);
+		glStencilFunc(GL_NOTEQUAL, 0, 0xFFFFFFFFL);
+		glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+
+		glEnable(GL_BLEND);
+		glColor4f(0, 0, 0, 0.7);
+		geometry_draw(sphere_vol.geom, &tmp);
 		scene_draw(&S);
+		glPopAttrib();
+
+		glDisable(GL_STENCIL_TEST);
+		scene_draw(&S);
+
 		glfwSwapBuffers(_window);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 		glfwPollEvents();
 	}
 	gfx_fini();
@@ -535,31 +686,21 @@ static void reshape(GLFWwindow *win, int w, int h) {
 	glMatrixMode(GL_MODELVIEW);
 }
 
-void sg_core_axes(void) {
-	glDisable(GL_LIGHTING);
-        glBegin(GL_LINES);
-        glColor3f(1, 0, 0); glVertex3f(0, 0, 0);glVertex3f(1, 0, 0);
-        glColor3f(0, 1, 0); glVertex3f(0, 0, 0);glVertex3f(0, 1, 0);
-        glColor3f(0, 0, 1); glVertex3f(0, 0, 0);glVertex3f(0, 0, 1);
-        glEnd();
-	glEnable(GL_LIGHTING);
-}
-
 void sg_core_axes_in(tzm4 *to) {
 	glPushMatrix();
 	glLoadMatrixf(to->f);
-	glDisable(GL_LIGHTING);
-        glBegin(GL_LINES);
-        glColor3f(1, 0, 0); glVertex3f(0, 0, 0);glVertex3f(1, 0, 0);
-        glColor3f(0, 1, 0); glVertex3f(0, 0, 0);glVertex3f(0, 1, 0);
-        glColor3f(0, 0, 1); glVertex3f(0, 0, 0);glVertex3f(0, 0, 1);
-        glEnd();
-	glEnable(GL_LIGHTING);
+	glPushAttrib(GL_COLOR_BUFFER_BIT);
+	glBegin(GL_LINES);
+	glColor3f(1, 0, 0); glVertex3f(0, 0, 0);glVertex3f(1, 0, 0);
+	glColor3f(0, 1, 0); glVertex3f(0, 0, 0);glVertex3f(0, 1, 0);
+	glColor3f(0, 0, 1); glVertex3f(0, 0, 0);glVertex3f(0, 0, 1);
+	glEnd();
+	glPopAttrib();
 	glPopMatrix();
 }
 
 void sg_core_plane(void) {
-	glDisable(GL_LIGHTING);
+	glPushAttrib(GL_COLOR_BUFFER_BIT);
 	glBegin(GL_QUADS);
 	glColor3f(1, 1, 1);
 	glTexCoord2d(0.0,0.0); glVertex2d(0.0,0.0);
@@ -567,5 +708,5 @@ void sg_core_plane(void) {
 	glTexCoord2d(1.0,1.0); glVertex2d(1.0,1.0);
 	glTexCoord2d(0.0,1.0); glVertex2d(0.0,1.0);
 	glEnd();
-	glEnable(GL_LIGHTING);
+	glPopAttrib();
 }

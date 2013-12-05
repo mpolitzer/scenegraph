@@ -16,7 +16,8 @@ SG=scene.c  scene.h\
    light.c     light.h\
    cache.c     cache.h\
    cam_ctl.c   cam_ctl.h\
-   scene_env.c scene_env.h
+   scene_env.c scene_env.h\
+   msh.c       msh.h
 TZMATH= tzm4_sse.c\
 	tzv2_sse.c\
 	tzv3_sse.c\

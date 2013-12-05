@@ -23,6 +23,12 @@ void sgn_geom_draw(struct sgn_base *_self, struct scene *scene) {
 
 	sgn_base_draw(&self->base, scene);
 }
+static void sgn_geom_update(struct sgn_base *_self, uint16_t ms) {
+	T *self = (T *)_self;
+	if (self->update)
+		self->update(self);
+	sgn_base_update(_self, ms);
+}
 
 static struct sgn_vtbl sgn_geom_vtbl = {
 	.pre_draw  = sgn_base_pre_draw,
@@ -30,7 +36,7 @@ static struct sgn_vtbl sgn_geom_vtbl = {
 	.post_draw = sgn_base_post_draw,
 	.isvisible = sgn_base_isvisible,
 	.addchild  = sgn_base_addchild,
-	.update    = sgn_base_update,
+	.update    = sgn_geom_update,
 };
 
 void sgn_geom_init(T *self, const char *name,
@@ -42,6 +48,7 @@ void sgn_geom_init(T *self, const char *name,
 	*sgn_geom_geom(self) = geom;
 	*sgn_geom_mat(self)  = mat;
 	*sgn_geom_tex(self)  = tex;
+	self->update         = NULL;
 	tzm4_mkiden(sgn_geom_localT(self));
 }
 

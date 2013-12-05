@@ -4,8 +4,8 @@
 void scene_env_fog_init(struct scene_env *self) {
 	self->fog_color   = tzv4_mkp(0.5, 0.5, 0.5);
 	self->fog_density = 0.35;
-	self->start = 1.0f;
-	self->end   = 5.0f;
+	self->start = 10.0f;
+	self->end   = 20.0f;
 
 	self->mode[0] = GL_EXP;
 	self->mode[1] = GL_EXP2;
@@ -23,7 +23,6 @@ void scene_env_fog_enable(struct scene_env *self) {
 	glFogfv(GL_FOG_COLOR, self->fog_color.f);
 	glFogf(GL_FOG_DENSITY, self->fog_density);
 	glHint(GL_FOG_HINT, GL_NICEST);
-	//glHint(GL_FOG_HINT, GL_DONT_CARE);
 	glFogf(GL_FOG_START, self->start);
 	glFogf(GL_FOG_END, self->end);
 	glEnable(GL_FOG);

@@ -13,6 +13,9 @@ struct sgn_geom {
 	struct material *mat;
 	struct texture  *tex;
 	tzm4 localT, localI;
+
+	/* One update per object. */
+	void (*update)(struct sgn_geom *self);
 };
 
 #define sgn_geom_localT(_self) (&(_self)->localT)

@@ -10,13 +10,12 @@ struct scene {
 	struct sgn_base root;
 	struct sgn_base *active_cam;
 	struct scene_env env;
-};
-
-enum render_pass {
-	render_pass_setup_lightmaps,
-	render_pass_setup_transformations,
-	render_pass_setup_camera,
-	render_pass_geometry
+	enum scene_render_pass {
+		render_pass_setup_lightmaps,
+		render_pass_setup_transformations,
+		render_pass_setup_camera,
+		render_pass_geometry
+	} rp;
 };
 
 void             scene_init     (struct scene *scene);

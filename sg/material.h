@@ -10,6 +10,7 @@ struct material {
 	tzv4 specular;
 	tzv4 emission;
 	float shininess;
+	float opacity;
 };
 
 struct material *material_init(struct material *self,

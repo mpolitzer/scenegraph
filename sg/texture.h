@@ -1,10 +1,12 @@
 #ifndef TEXTURE_H
 #define TEXTURE_H
 
+#include <stdbool.h>
+
 struct texture {
 	unsigned int type;
 	unsigned int id;
-	unsigned int islum;
+	bool islum;
 };
 
 struct texture *

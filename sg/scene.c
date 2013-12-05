@@ -17,7 +17,7 @@ void scene_draw(T *self) {
 	/* setup lightmaps */
 
 	/* setup camera */
-	sgn_cam_setup(self->active_cam, self);
+	sgn_cam_setup((struct sgn_cam *)self->active_cam, self);
 
 	/* setup local->global transformations & light */
 	sgn_pre_draw(&self->root, self);
@@ -38,6 +38,5 @@ struct sgn_base *scene_getroot(T *self) {
 }
 
 void scene_setcam(T *self, struct sgn_base *cam) {
-	printf("%s\n", sgn_base_name(cam));
 	self->active_cam = cam;
 }

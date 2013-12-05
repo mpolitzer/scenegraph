@@ -1,12 +1,6 @@
 #include <sg/geometry.h>
 #include <sg/gl/backend.h>
 
-struct vertex_332 {
-	tzv3 pos;
-	tzv3 normal;
-	tzv3 texcoord;
-};
-
 void geometry_mksurface(struct geometry *self, uint16_t dx, uint16_t dy,
 		/* a surface from (-0.5 -> 0.5, -0.5 -> 0.5) */
 		void (*fn)(float dx, float dy, struct vertex_332 *vert)) {
@@ -62,6 +56,7 @@ void geometry_mksurface(struct geometry *self, uint16_t dx, uint16_t dy,
 	self->n   = ninds;
 	self->AA  = min;
 	self->BB  = max;
+	self->type= GL_TRIANGLE_STRIP;
 }
 
 static void polar(float theta, float phi, struct vertex_332 *vert) {
@@ -73,6 +68,12 @@ static void polar(float theta, float phi, struct vertex_332 *vert) {
 	vert->pos      = tzv3_mk(r*ct*sp,   r*cp,   r*sp*st);
 	vert->normal   = tzv3_mk( ct*sp,    cp, sp*st);
 	vert->texcoord = tzv3_mk(-theta+0.5,-phi+0.5, 0);
+}
+
+static void tiled_plane(float di, float dj, struct vertex_332 *vert) {
+	vert->pos      = tzv3_mk(    di,      0, dj);
+	vert->normal   = tzv3_mk(     0,      1,  0);
+	vert->texcoord = tzv3_mk(di+0.5, dj+0.5,  0);
 }
 
 static void plane(float di, float dj, struct vertex_332 *vert) {
@@ -120,6 +121,12 @@ geometry_mkplane(struct geometry *self, uint16_t slices) {
 }
 
 struct geometry *
+geometry_mktiled_plane(struct geometry *self, uint16_t slices) {
+	geometry_mksurface(self, slices, slices, tiled_plane);
+	return self;
+}
+
+struct geometry *
 geometry_mkcylinder(struct geometry *self, uint16_t theta, uint16_t slices) {
 	geometry_mksurface(self, theta, slices, cylinder);
 	return self;
@@ -147,6 +154,6 @@ void geometry_draw(struct geometry *self, tzm4 *to_world) {
 	glTexCoordPointer(3, GL_FLOAT, sizeof(struct vertex_332), _t(texcoord));
 
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self->ibo);
-	glDrawElements(GL_TRIANGLE_STRIP, self->n, GL_UNSIGNED_SHORT, 0);
+	glDrawElements(self->type, self->n, GL_UNSIGNED_SHORT, 0);
 }
 #undef _t
